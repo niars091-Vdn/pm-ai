@@ -1434,7 +1434,7 @@ body {
     <div class="cfg-handle"></div>
     <h3>⚙️ Server LayoutSync</h3>
     <p>Inserisci l'indirizzo del tuo server. Deve essere raggiungibile dalla stessa rete WiFi.</p>
-    <input class="cfg-inp" id="cfg-url" type="url" placeholder="http://192.168.1.82:8000">
+    <input class="cfg-inp" id="cfg-url" type="url" placeholder="">
     <button class="btn primary" style="width:100%" onclick="saveCfg()">Salva e verifica</button>
   </div>
 </div>
@@ -1443,10 +1443,22 @@ body {
 <div id="toast"></div>
 
 <script>
+function resetImport() {
+  importedFile=null;
+  document.getElementById('import-zone').className='import-zone';
+  document.getElementById('import-icon').textContent='📂';
+  document.getElementById('import-title').textContent='Seleziona file .ply';
+  document.getElementById('import-sub').textContent=
+    'Tocca per sfogliare i file
+oppure trascina il file qui';
+  document.getElementById('import-file-info').style.display='none';
+  document.getElementById('btn-analyze').disabled=true;
+  document.getElementById('ply-input').value='';
+}
 // ─────────────────────────────────────────────
 // STATO
 // ─────────────────────────────────────────────
-let SERVER   = localStorage.getItem('ls_srv') || '';
+let SERVER = localStorage.getItem('ls_srv') || '';
 let curTool  = 'wall';
 let walls    = [];
 let elements = [];
@@ -2424,18 +2436,7 @@ async function analyzeFile() {
 }
 
 // Reset import quando si torna alla schermata
-function resetImport() {
-  importedFile=null;
-  document.getElementById('import-zone').className='import-zone';
-  document.getElementById('import-icon').textContent='📂';
-  document.getElementById('import-title').textContent='Seleziona file .ply';
-  document.getElementById('import-sub').textContent=
-    'Tocca per sfogliare i file
-oppure trascina il file qui';
-  document.getElementById('import-file-info').style.display='none';
-  document.getElementById('btn-analyze').disabled=true;
-  document.getElementById('ply-input').value='';
-}
+// resetImport moved to top
 </script>
 
 <script>
