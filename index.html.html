@@ -1,0 +1,3269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LayoutSync">
+<title>LayoutSync</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:        #0a0e1a;
+  --bg2:       #111827;
+  --surface:   #1a2035;
+  --border:    #1e2d47;
+  --accent:    #2dd4bf;
+  --accent-dim:rgba(45,212,191,0.12);
+  --blue:      #3b82f6;
+  --blue-dim:  rgba(59,130,246,0.12);
+  --warn:      #f59e0b;
+  --warn-dim:  rgba(245,158,11,0.10);
+  --danger:    #ef4444;
+  --green:     #10b981;
+  --text:      #f1f5f9;
+  --text2:     #94a3b8;
+  --text3:     #475569;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Inter', sans-serif;
+  --r:         14px;
+  --r-sm:      8px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; background:var(--bg); }
+
+body {
+  font-family: var(--sans);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+/* ── SPLASH ── */
+#splash {
+  position:fixed; inset:0; z-index:999;
+  background:var(--bg);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+  transition:opacity 0.5s;
+}
+#splash.out { opacity:0; pointer-events:none; }
+
+.splash-logo {
+  font-size:42px; font-weight:700;
+  letter-spacing:-2px; line-height:1;
+}
+.splash-logo em { color:var(--accent); font-style:normal; }
+
+.splash-sub {
+  font-size:13px; color:var(--text2);
+  letter-spacing:0.5px; text-transform:uppercase;
+}
+
+.splash-ring {
+  width:48px; height:48px;
+  border-radius:50%;
+  border:2px solid var(--border);
+  border-top-color:var(--accent);
+  animation:spin 0.9s linear infinite;
+  margin-top:8px;
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  display:flex; align-items:center;
+  justify-content:space-between;
+  padding:12px 16px 10px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  position:relative; z-index:10;
+}
+.logo-sm {
+  font-size:18px; font-weight:700;
+  letter-spacing:-0.5px;
+}
+.logo-sm em { color:var(--accent); font-style:normal; }
+
+.server-pill {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 11px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  font-family:var(--mono);
+  font-size:10px; color:var(--text2);
+  cursor:pointer;
+  transition:border-color 0.2s;
+}
+.server-pill:active { border-color:var(--accent); }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--text3); transition:all 0.3s; }
+.dot.on  { background:var(--accent); box-shadow:0 0 8px var(--accent); }
+.dot.off { background:var(--danger); }
+
+/* ── PROGRESS BAR ── */
+#progress {
+  display:flex; gap:4px; padding:10px 16px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.prog-seg {
+  flex:1; height:3px; border-radius:2px;
+  background:var(--border);
+  transition:background 0.4s;
+  position:relative; overflow:hidden;
+}
+.prog-seg.active::after {
+  content:'';
+  position:absolute; inset:0;
+  background:var(--accent);
+  animation:pulse-seg 1.5s ease-in-out infinite;
+}
+@keyframes pulse-seg {
+  0%,100% { opacity:1; } 50% { opacity:0.5; }
+}
+.prog-seg.done { background:var(--accent); }
+
+/* ── MAIN ── */
+#main { flex:1; position:relative; overflow:hidden; }
+
+.screen {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.2s, transform 0.2s;
+  transform:translateX(30px);
+}
+.screen.active {
+  opacity:1; pointer-events:all;
+  transform:translateX(0);
+}
+.screen.back { transform:translateX(-30px); }
+
+/* ── BOTTOM BAR ── */
+.bot {
+  padding:12px 16px;
+  padding-bottom:max(12px, env(safe-area-inset-bottom));
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+  display:flex; gap:10px;
+}
+
+.btn {
+  flex:1; padding:14px;
+  border:none; border-radius:var(--r);
+  font-family:var(--sans);
+  font-size:15px; font-weight:600;
+  cursor:pointer; transition:all 0.15s;
+}
+.btn:active { transform:scale(0.97); }
+.btn.primary { background:var(--accent); color:#0a0e1a; }
+.btn.primary:disabled { opacity:0.35; pointer-events:none; }
+.btn.ghost {
+  background:transparent; color:var(--text2);
+  border:1.5px solid var(--border); flex:0 0 auto;
+  padding:14px 18px;
+}
+.btn.ghost:active { border-color:var(--accent); color:var(--accent); }
+
+/* ══════════════════════════════════
+   SCREEN 0 — WELCOME
+══════════════════════════════════ */
+#s-welcome {
+  background:var(--bg);
+  align-items:center; justify-content:center;
+  text-align:center; gap:0; padding:0;
+  overflow-y:auto;
+}
+
+.welcome-hero {
+  width:100%; padding:48px 24px 32px;
+  background:linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  border-bottom:1px solid var(--border);
+}
+.welcome-icon {
+  font-size:64px; margin-bottom:20px;
+  filter:drop-shadow(0 0 20px rgba(45,212,191,0.4));
+}
+.welcome-title {
+  font-size:32px; font-weight:700;
+  letter-spacing:-1px; margin-bottom:8px;
+  line-height:1.1;
+}
+.welcome-title em { color:var(--accent); font-style:normal; }
+.welcome-sub {
+  font-size:14px; color:var(--text2);
+  line-height:1.6; max-width:280px; margin:0 auto;
+}
+
+.welcome-steps {
+  width:100%; padding:24px 20px;
+  display:flex; flex-direction:column; gap:14px;
+}
+.w-step {
+  display:flex; align-items:flex-start; gap:14px;
+  padding:14px; background:var(--surface);
+  border:1px solid var(--border); border-radius:var(--r);
+  text-align:left;
+}
+.w-step-num {
+  width:32px; height:32px; flex-shrink:0;
+  border-radius:50%; background:var(--accent-dim);
+  border:1px solid var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:13px;
+  color:var(--accent); font-weight:500;
+}
+.w-step-body strong { display:block; font-size:14px; margin-bottom:3px; }
+.w-step-body span   { font-size:12px; color:var(--text2); line-height:1.5; }
+
+.welcome-bot { padding:16px 20px 32px; width:100%; }
+
+/* ══════════════════════════════════
+   SCREEN 1 — DISEGNO PIANTA
+══════════════════════════════════ */
+#s-draw { background:var(--bg); }
+
+.toolbar {
+  display:flex; gap:6px; padding:10px 12px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  overflow-x:auto; flex-shrink:0;
+  scrollbar-width:none;
+}
+.toolbar::-webkit-scrollbar { display:none; }
+
+.t-btn {
+  display:flex; flex-direction:column;
+  align-items:center; gap:3px;
+  padding:8px 11px;
+  background:transparent;
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  color:var(--text2);
+  font-family:var(--sans);
+  font-size:10px; font-weight:500;
+  cursor:pointer; flex-shrink:0;
+  transition:all 0.15s;
+  white-space:nowrap;
+}
+.t-btn .i { font-size:20px; line-height:1; }
+.t-btn.on {
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-dim);
+}
+.t-btn:active { transform:scale(0.93); }
+
+#cvs-wrap { flex:1; position:relative; overflow:hidden; touch-action:none; }
+#cvs { width:100%; height:100%; display:block; }
+
+.cvs-tip {
+  position:absolute; bottom:16px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(10,14,26,0.88);
+  border:1px solid var(--border);
+  color:var(--text2); font-size:12px;
+  padding:8px 18px; border-radius:20px;
+  pointer-events:none; white-space:nowrap;
+  backdrop-filter:blur(8px);
+  transition:opacity 0.3s;
+}
+
+/* ══════════════════════════════════
+   SCREEN 2 — FOTOCAMERA
+══════════════════════════════════ */
+#s-camera { background:#000; }
+
+.cam-header {
+  padding:14px 16px 10px;
+  background:rgba(0,0,0,0.7);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  flex-shrink:0;
+  backdrop-filter:blur(8px);
+}
+.cam-header h2 { font-size:15px; font-weight:600; margin-bottom:2px; }
+.cam-header p  { font-size:12px; color:var(--text2); }
+
+.cam-walls {
+  display:flex; gap:8px; padding:10px 12px;
+  background:rgba(0,0,0,0.6); flex-shrink:0;
+  overflow-x:auto; scrollbar-width:none;
+  backdrop-filter:blur(8px);
+}
+.cam-walls::-webkit-scrollbar { display:none; }
+
+.wall-chip {
+  display:flex; align-items:center; gap:6px;
+  padding:7px 12px;
+  border-radius:20px;
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  font-size:12px; font-weight:500;
+  color:var(--text2); cursor:pointer;
+  flex-shrink:0; transition:all 0.15s;
+}
+.wall-chip.active {
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-dim);
+}
+.wall-chip.done {
+  border-color:var(--green);
+  color:var(--green);
+  background:rgba(16,185,129,0.1);
+}
+
+#cam-view { flex:1; position:relative; background:#000; overflow:hidden; }
+#video { width:100%; height:100%; object-fit:cover; }
+#cam-canvas { display:none; }
+
+.cam-overlay {
+  position:absolute; inset:0;
+  pointer-events:none;
+}
+.cam-corner {
+  position:absolute;
+  width:28px; height:28px;
+  border-color:var(--accent);
+  border-style:solid;
+  opacity:0.8;
+}
+.cam-corner.tl { top:20px; left:20px; border-width:2px 0 0 2px; }
+.cam-corner.tr { top:20px; right:20px; border-width:2px 2px 0 0; }
+.cam-corner.bl { bottom:20px; left:20px; border-width:0 0 2px 2px; }
+.cam-corner.br { bottom:20px; right:20px; border-width:0 2px 2px 0; }
+
+.cam-label {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(10,14,26,0.75);
+  border:1px solid var(--accent);
+  color:var(--accent); font-size:13px; font-weight:600;
+  padding:8px 20px; border-radius:20px;
+  backdrop-filter:blur(8px);
+  pointer-events:none;
+}
+
+.cam-shutter {
+  position:absolute; bottom:20px; left:50%;
+  transform:translateX(-50%);
+  width:68px; height:68px;
+  border-radius:50%;
+  background:white;
+  border:4px solid rgba(255,255,255,0.3);
+  box-shadow:0 0 0 2px rgba(255,255,255,0.5);
+  cursor:pointer; transition:all 0.12s;
+  pointer-events:all;
+  display:flex; align-items:center; justify-content:center;
+}
+.cam-shutter:active { transform:translateX(-50%) scale(0.9); }
+.cam-shutter-inner {
+  width:52px; height:52px; border-radius:50%;
+  background:white;
+}
+
+.cam-preview-strip {
+  position:absolute; bottom:20px; right:16px;
+  display:flex; flex-direction:column; gap:6px;
+  pointer-events:all;
+}
+.cam-thumb {
+  width:52px; height:52px;
+  border-radius:8px; object-fit:cover;
+  border:2px solid var(--accent);
+  box-shadow:0 2px 12px rgba(0,0,0,0.5);
+}
+
+/* ══════════════════════════════════
+   SCREEN 3 — MISURE
+══════════════════════════════════ */
+#s-measures { background:var(--bg); overflow-y:auto; }
+
+.sec-header {
+  padding:18px 16px 12px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.sec-header h2 { font-size:18px; font-weight:700; margin-bottom:4px; }
+.sec-header p  { font-size:13px; color:var(--text2); line-height:1.5; }
+
+.m-list { padding:12px; display:flex; flex-direction:column; gap:10px; }
+
+.m-card {
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r); padding:14px;
+  transition:border-color 0.2s;
+}
+.m-card.need { border-color:rgba(245,158,11,0.35); }
+.m-card.done { border-color:rgba(16,185,129,0.35); }
+
+.m-card-top {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:10px;
+}
+.m-ico {
+  width:38px; height:38px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:19px; flex-shrink:0;
+}
+.m-ico.warn { background:var(--warn-dim); }
+.m-ico.ok   { background:rgba(16,185,129,0.1); }
+
+.m-info { flex:1; }
+.m-info strong { display:block; font-size:14px; font-weight:600; margin-bottom:2px; }
+.m-info span   { font-size:11px; color:var(--text2); }
+
+.m-tag {
+  font-family:var(--mono); font-size:10px;
+  padding:3px 8px; border-radius:20px; font-weight:500;
+}
+.m-tag.manual { background:var(--warn-dim); color:var(--warn); }
+.m-tag.auto   { background:var(--blue-dim); color:var(--blue); }
+
+.m-arcore {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; background:var(--bg);
+  border-radius:6px; margin-bottom:10px;
+  font-size:12px; color:var(--text2);
+}
+.m-arcore .v { font-family:var(--mono); color:var(--blue); font-weight:500; }
+.m-arcore .c { margin-left:auto; font-size:11px; }
+.m-arcore .c.lo { color:var(--warn); }
+.m-arcore .c.hi { color:var(--accent); }
+
+.m-row { display:flex; gap:8px; align-items:center; }
+.m-inp {
+  flex:1; background:var(--bg);
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:11px 12px;
+  color:var(--text);
+  font-family:var(--mono); font-size:16px;
+  outline:none; transition:border-color 0.2s;
+}
+.m-inp:focus { border-color:var(--accent); }
+.m-inp::placeholder { color:var(--text3); font-size:13px; font-family:var(--sans); }
+.m-unit { font-family:var(--mono); font-size:13px; color:var(--text2); flex-shrink:0; }
+.m-ok {
+  width:42px; height:42px; flex-shrink:0;
+  border-radius:var(--r-sm); background:var(--accent);
+  border:none; color:#0a0e1a; font-size:18px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+}
+.m-ok:active { transform:scale(0.9); }
+.m-ok.confirmed { background:rgba(16,185,129,0.15); color:var(--green); }
+
+/* ══════════════════════════════════
+   SCREEN 4 — ELABORAZIONE
+══════════════════════════════════ */
+#s-proc {
+  background:var(--bg);
+  align-items:center; justify-content:center;
+  text-align:center; gap:28px; padding:32px;
+}
+
+.proc-anim {
+  position:relative; width:90px; height:90px;
+}
+.proc-ring {
+  position:absolute; inset:0;
+  border-radius:50%;
+  border:2.5px solid var(--border);
+  border-top-color:var(--accent);
+  animation:spin 1s linear infinite;
+}
+.proc-ring2 {
+  position:absolute; inset:10px;
+  border-radius:50%;
+  border:2px solid transparent;
+  border-bottom-color:var(--blue);
+  animation:spin 1.5s linear infinite reverse;
+}
+.proc-icon-center {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px;
+}
+
+.proc-title { font-size:19px; font-weight:700; }
+.proc-sub   { font-size:13px; color:var(--text2); margin-top:4px; }
+
+.proc-list {
+  width:100%; max-width:320px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.p-step {
+  display:flex; align-items:center; gap:10px;
+  padding:11px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  font-size:13px; color:var(--text2);
+  transition:all 0.3s;
+}
+.p-step.on   { color:var(--accent); border-color:rgba(45,212,191,0.3); background:var(--accent-dim); }
+.p-step.done { color:var(--text); border-color:rgba(16,185,129,0.25); }
+.p-step .pi  { font-size:15px; width:22px; text-align:center; }
+
+/* ══════════════════════════════════
+   SCREEN 5 — RISULTATI
+══════════════════════════════════ */
+#s-results { background:var(--bg); overflow-y:auto; }
+
+.res-hero {
+  padding:28px 20px 20px;
+  background:linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+.res-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 18px;
+  background:rgba(16,185,129,0.12);
+  border:1px solid rgba(16,185,129,0.3);
+  border-radius:20px; font-size:13px;
+  color:var(--green); font-weight:500;
+  margin-bottom:16px;
+}
+.res-title { font-size:24px; font-weight:700; letter-spacing:-0.5px; margin-bottom:6px; }
+.res-time  { font-size:13px; color:var(--text2); }
+
+.res-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:10px; padding:16px;
+}
+.res-stat {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r); padding:14px;
+}
+.res-stat .v {
+  font-family:var(--mono); font-size:22px;
+  font-weight:500; color:var(--accent);
+  display:block; margin-bottom:4px;
+}
+.res-stat .l { font-size:11px; color:var(--text2); }
+
+.res-section { padding:0 16px 12px; }
+.res-section h3 {
+  font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:0.8px;
+  color:var(--text2); margin-bottom:10px;
+}
+
+.file-card {
+  display:flex; align-items:center; gap:12px;
+  padding:13px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  margin-bottom:8px; cursor:pointer;
+  transition:border-color 0.15s;
+}
+.file-card:active { border-color:var(--accent); }
+.f-ico  { font-size:24px; flex-shrink:0; }
+.f-info { flex:1; }
+.f-info strong { display:block; font-size:13px; font-weight:600; margin-bottom:2px; }
+.f-info span   { font-size:11px; color:var(--text2); }
+.f-arr  { color:var(--text2); font-size:16px; }
+
+.anom-card {
+  padding:12px 14px;
+  background:var(--warn-dim);
+  border:1px solid rgba(245,158,11,0.2);
+  border-radius:var(--r-sm);
+  margin-bottom:8px;
+}
+.anom-card strong { display:block; color:var(--warn); font-size:13px; margin-bottom:3px; }
+.anom-card span   { font-size:12px; color:var(--text2); }
+
+/* ── PHOTO PREVIEW MODAL ── */
+#photo-modal {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,0.92);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.2s;
+  flex-direction:column; gap:16px; padding:20px;
+}
+#photo-modal.open { opacity:1; pointer-events:all; }
+#photo-modal img {
+  max-width:100%; max-height:60vh;
+  border-radius:var(--r); object-fit:contain;
+  border:1px solid var(--border);
+}
+#photo-modal-label { font-size:14px; color:var(--text2); }
+#photo-modal-close {
+  padding:12px 32px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); color:var(--text);
+  font-family:var(--sans); font-size:14px; cursor:pointer;
+}
+
+/* ── CONFIG SHEET ── */
+#cfg-overlay {
+  position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(4px);
+  opacity:0; pointer-events:none; transition:opacity 0.2s;
+  display:flex; align-items:flex-end;
+}
+#cfg-overlay.open { opacity:1; pointer-events:all; }
+#cfg-sheet {
+  width:100%; background:var(--surface);
+  border-radius:20px 20px 0 0;
+  padding:20px 16px 36px;
+  border-top:1px solid var(--border);
+  transform:translateY(100%);
+  transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+#cfg-overlay.open #cfg-sheet { transform:translateY(0); }
+.cfg-handle {
+  width:36px; height:4px; background:var(--border);
+  border-radius:2px; margin:0 auto 20px;
+}
+#cfg-sheet h3 { font-size:16px; font-weight:600; margin-bottom:6px; }
+#cfg-sheet p  { font-size:12px; color:var(--text2); margin-bottom:16px; }
+.cfg-inp {
+  width:100%; background:var(--bg);
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:12px 14px; color:var(--text);
+  font-family:var(--mono); font-size:14px;
+  outline:none; margin-bottom:12px;
+  transition:border-color 0.2s;
+}
+.cfg-inp:focus { border-color:var(--accent); }
+
+/* ── TOAST ── */
+#toast {
+  position:fixed; bottom:100px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text); font-size:13px;
+  padding:10px 20px; border-radius:20px;
+  opacity:0; transition:all 0.25s;
+  pointer-events:none; z-index:400;
+  white-space:nowrap;
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+@keyframes spin { to { transform:rotate(360deg); } }
+
+<style>
+.vb {
+  padding:5px 10px;
+  background:rgba(30,45,71,0.8);
+  border:1px solid #1e2d47;
+  border-radius:6px;
+  color:#94a3b8;
+  font-family:Inter,sans-serif;
+  font-size:11px;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.vb.on {
+  background:rgba(45,212,191,0.15);
+  border-color:#2dd4bf;
+  color:#2dd4bf;
+}
+.vb:active { transform:scale(0.92); }
+
+.import-screen {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:28px 20px; gap:20px; text-align:center;
+  background:var(--bg);
+}
+.import-zone {
+  width:100%; max-width:320px;
+  border:2px dashed var(--border);
+  border-radius:var(--r);
+  padding:32px 20px;
+  display:flex; flex-direction:column;
+  align-items:center; gap:14px;
+  cursor:pointer; transition:all 0.2s;
+  background:var(--surface);
+}
+.import-zone.dragover {
+  border-color:var(--accent);
+  background:var(--accent-dim);
+}
+.import-zone.loaded {
+  border-color:var(--green);
+  background:rgba(16,185,129,0.08);
+}
+.import-icon { font-size:48px; }
+.import-title { font-size:16px; font-weight:600; }
+.import-sub   { font-size:12px; color:var(--text2); line-height:1.5; }
+.import-file-info {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 16px;
+  background:rgba(16,185,129,0.08);
+  border:1px solid rgba(16,185,129,0.25);
+  border-radius:var(--r-sm);
+  width:100%; max-width:320px;
+  font-size:13px;
+}
+.import-file-info .fi-ico { font-size:22px; flex-shrink:0; }
+.import-file-info .fi-name { flex:1; font-weight:500; word-break:break-all; }
+.import-file-info .fi-size { font-family:var(--mono); font-size:11px; color:var(--text2); flex-shrink:0; }
+.import-tips {
+  width:100%; max-width:320px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.import-tip {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  font-size:12px; color:var(--text2); text-align:left;
+}
+.import-tip .ti { font-size:16px; flex-shrink:0; }
+
+/* ── ANTEPRIMA SCAN ── */
+.scan-preview {
+  flex:1; display:flex; flex-direction:column; background:var(--bg); overflow:hidden;
+}
+.scan-stats {
+  display:flex; gap:8px; padding:10px 14px;
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  flex-shrink:0; overflow-x:auto; scrollbar-width:none;
+}
+.scan-stat {
+  display:flex; flex-direction:column; gap:2px; flex-shrink:0;
+  padding:8px 12px; background:var(--surface);
+  border:1px solid var(--border); border-radius:8px;
+}
+.scan-stat .sv {
+  font-family:var(--mono); font-size:14px; font-weight:500; color:var(--accent);
+}
+.scan-stat .sl { font-size:10px; color:var(--text2); }
+
+#scan-cvs-wrap {
+  flex:1; position:relative; background:#060a12; overflow:hidden;
+}
+#scan-cvs { width:100%; height:100%; display:block; touch-action:none; }
+
+.scan-legend {
+  display:flex; gap:12px; padding:8px 14px; flex-wrap:wrap;
+  background:var(--bg2); border-top:1px solid var(--border); flex-shrink:0;
+}
+.scan-leg-item {
+  display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text2);
+}
+.scan-leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+.scan-quality-bar {
+  margin:10px 14px 0; height:4px; background:var(--border);
+  border-radius:2px; overflow:hidden; flex-shrink:0;
+}
+.scan-quality-fill {
+  height:100%; border-radius:2px; transition:width 0.8s ease;
+}
+.scan-quality-label {
+  padding:4px 14px 8px; font-size:11px; flex-shrink:0;
+  display:flex; justify-content:space-between;
+}
+
+/* ── CONFERMA MISURE ── */
+.verifica-list {
+  flex:1; overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.v-card {
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r); overflow:hidden;
+  transition:border-color 0.2s;
+}
+.v-card.warn    { border-color:rgba(245,158,11,0.4); }
+.v-card.ok      { border-color:rgba(16,185,129,0.3); }
+.v-card.critical{ border-color:rgba(239,68,68,0.4); }
+
+.v-card-header {
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+}
+.v-card-ico {
+  width:36px; height:36px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.v-card-ico.warn     { background:var(--warn-dim); }
+.v-card-ico.critical { background:rgba(239,68,68,0.12); }
+.v-card-ico.ok       { background:rgba(16,185,129,0.1); }
+
+.v-card-info { flex:1; }
+.v-card-info strong {
+  display:block; font-size:14px; font-weight:600; margin-bottom:2px;
+}
+.v-card-info span { font-size:11px; color:var(--text2); line-height:1.4; }
+
+.v-badge {
+  font-family:var(--mono); font-size:10px;
+  padding:3px 8px; border-radius:20px; font-weight:500; flex-shrink:0;
+}
+.v-badge.warn     { background:var(--warn-dim); color:var(--warn); }
+.v-badge.critical { background:rgba(239,68,68,0.12); color:var(--danger); }
+.v-badge.ok       { background:rgba(16,185,129,0.1); color:var(--green); }
+
+/* Foto allegata */
+.v-photo-strip {
+  display:flex; gap:8px; padding:0 14px 10px; overflow-x:auto; scrollbar-width:none;
+}
+.v-photo {
+  width:90px; height:68px; border-radius:8px; object-fit:cover;
+  border:1.5px solid var(--border); flex-shrink:0; cursor:pointer;
+  transition:border-color 0.15s;
+}
+.v-photo:active { border-color:var(--accent); }
+.v-photo-add {
+  width:90px; height:68px; border-radius:8px;
+  border:1.5px dashed var(--border);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:4px; font-size:10px; color:var(--text3);
+  cursor:pointer; flex-shrink:0; transition:all 0.15s;
+  background:var(--bg);
+}
+.v-photo-add:active { border-color:var(--accent); color:var(--accent); }
+.v-photo-add .pai { font-size:20px; }
+
+/* Misura rilevata + input conferma */
+.v-measure-row {
+  display:flex; align-items:center; gap:10px; padding:0 14px 12px;
+}
+.v-measure-detected {
+  flex:1; padding:10px 12px; background:var(--bg);
+  border-radius:var(--r-sm); border:1px solid var(--border);
+}
+.v-measure-detected .vmd-lbl { font-size:10px; color:var(--text3); margin-bottom:3px; }
+.v-measure-detected .vmd-val {
+  font-family:var(--mono); font-size:16px; font-weight:500; color:var(--text);
+}
+.v-measure-detected .vmd-src { font-size:10px; color:var(--text2); margin-top:2px; }
+
+.v-arrow { color:var(--text3); font-size:14px; flex-shrink:0; }
+
+.v-confirm-inp {
+  width:100px; background:var(--bg);
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:10px 8px; color:var(--text);
+  font-family:var(--mono); font-size:15px;
+  outline:none; text-align:center;
+  transition:border-color 0.2s; flex-shrink:0;
+}
+.v-confirm-inp:focus { border-color:var(--accent); }
+.v-confirm-inp.confirmed { border-color:var(--green); color:var(--green); }
+
+.v-ok-btn {
+  width:38px; height:38px; flex-shrink:0;
+  border-radius:var(--r-sm); background:var(--accent);
+  border:none; color:#0a0e1a; font-size:16px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+}
+.v-ok-btn:active { transform:scale(0.9); }
+.v-ok-btn.done { background:rgba(16,185,129,0.15); color:var(--green); }
+
+/* Nota testo */
+.v-note {
+  margin:0 14px 12px; padding:8px 10px;
+  background:var(--bg); border-radius:6px;
+  font-size:11px; color:var(--text2); line-height:1.5;
+  border-left:2px solid var(--warn);
+}
+
+/* Header sezione */
+.v-sec-hdr {
+  padding:14px 16px 6px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.v-sec-hdr h2 { font-size:16px; font-weight:700; margin-bottom:3px; }
+.v-sec-hdr p  { font-size:12px; color:var(--text2); line-height:1.5; }
+
+/* Summary bar */
+.v-summary {
+  display:flex; gap:6px; padding:10px 14px;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  flex-shrink:0; overflow-x:auto; scrollbar-width:none;
+}
+.v-sum-pill {
+  display:flex; align-items:center; gap:5px;
+  padding:5px 10px; border-radius:20px;
+  font-size:11px; font-weight:500; flex-shrink:0;
+}
+.v-sum-pill.ok       { background:rgba(16,185,129,0.12); color:var(--green); border:1px solid rgba(16,185,129,0.25); }
+.v-sum-pill.warn     { background:var(--warn-dim); color:var(--warn); border:1px solid rgba(245,158,11,0.25); }
+.v-sum-pill.critical { background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.25); }
+
+/* Sketch engine */
+.snap-indicator {
+  position:absolute;
+  width:16px; height:16px;
+  border-radius:50%;
+  border:2px solid var(--accent);
+  background:var(--accent-dim);
+  pointer-events:none;
+  transform:translate(-50%,-50%);
+  display:none;
+  transition:all 0.1s;
+}
+.angle-indicator {
+  position:absolute;
+  bottom:60px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(10,14,26,0.88);
+  border:1px solid var(--border);
+  color:var(--accent);
+  font-family:var(--mono);
+  font-size:12px; padding:5px 14px;
+  border-radius:20px; pointer-events:none;
+  opacity:0; transition:opacity 0.2s;
+  backdrop-filter:blur(8px);
+}
+.sketch-controls {
+  display:flex; gap:8px; padding:6px 12px;
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  flex-shrink:0; align-items:center;
+}
+.sketch-undo {
+  padding:7px 14px;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:6px; color:var(--text2);
+  font-family:var(--sans); font-size:12px;
+  cursor:pointer; transition:all 0.15s;
+}
+.sketch-undo:active { border-color:var(--accent); color:var(--accent); }
+.sketch-close-btn {
+  padding:7px 14px;
+  background:var(--accent-dim);
+  border:1px solid var(--accent);
+  border-radius:6px; color:var(--accent);
+  font-family:var(--sans); font-size:12px;
+  cursor:pointer; transition:all 0.15s;
+  display:none;
+}
+.sketch-close-btn.visible { display:block; }
+.sketch-info {
+  flex:1; font-size:11px; color:var(--text2);
+  text-align:center;
+}
+</style>
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">Layout<em>Sync</em></div>
+  <div class="splash-sub">Rilievo tecnico intelligente</div>
+  <div class="splash-ring"></div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo-sm">Layout<em>Sync</em></div>
+  <div class="server-pill" onclick="openCfg()">
+    <div class="dot" id="sdot"></div>
+    <span id="stxt">---</span>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div id="progress">
+  <div class="prog-seg" id="pg0"></div>
+  <div class="prog-seg" id="pg1"></div>
+  <div class="prog-seg" id="pg2"></div>
+  <div class="prog-seg" id="pg3"></div>
+  <div class="prog-seg" id="pg4"></div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+
+
+<!-- ── S-PREVIEW: ANTEPRIMA SCAN ── -->
+<div class="screen" id="s-preview">
+  <div class="scan-preview">
+
+    <div class="scan-stats" id="scan-stats">
+      <div class="scan-stat">
+        <span class="sv" id="ss-punti">---</span>
+        <span class="sl">Punti 3D</span>
+      </div>
+      <div class="scan-stat">
+        <span class="sv" id="ss-pareti">---</span>
+        <span class="sl">Pareti</span>
+      </div>
+      <div class="scan-stat">
+        <span class="sv" id="ss-w">---</span>
+        <span class="sl">Largh. stimata</span>
+      </div>
+      <div class="scan-stat">
+        <span class="sv" id="ss-l">---</span>
+        <span class="sl">Lung. stimata</span>
+      </div>
+      <div class="scan-stat">
+        <span class="sv" id="ss-q">---</span>
+        <span class="sl">Qualità scan</span>
+      </div>
+    </div>
+
+    <div class="scan-quality-bar">
+      <div class="scan-quality-fill" id="sqf" style="width:0%"></div>
+    </div>
+    <div class="scan-quality-label">
+      <span id="sql-txt" style="color:var(--text2)">Analisi in corso...</span>
+      <span id="sql-pct" style="color:var(--accent);font-family:var(--mono)"></span>
+    </div>
+
+    <div id="scan-cvs-wrap">
+      <canvas id="scan-cvs"></canvas>
+    </div>
+
+    <div class="scan-legend">
+      <div class="scan-leg-item">
+        <div class="scan-leg-dot" style="background:#2dd4bf"></div>Pareti rilevate
+      </div>
+      <div class="scan-leg-item">
+        <div class="scan-leg-dot" style="background:#f59e0b"></div>Zone incerte
+      </div>
+      <div class="scan-leg-item">
+        <div class="scan-leg-dot" style="background:#ef4444"></div>Zone mancanti
+      </div>
+      <div class="scan-leg-item">
+        <div class="scan-leg-dot" style="background:#475569"></div>Pavimento/soffitto
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bot">
+    <button class="btn ghost" onclick="goScreen('import')">← Riscan</button>
+    <button class="btn primary" id="btn-preview-ok" onclick="goVerifica()">
+      Conferma e analizza →
+    </button>
+  </div>
+</div>
+
+
+<!-- ── S-VERIFICA: CONFERMA MISURE ── -->
+<div class="screen" id="s-verifica">
+
+  <div class="v-sec-hdr">
+    <h2>Verifica misure</h2>
+    <p>L'AI ha analizzato la scansione. Conferma i punti segnalati con una foto o il metro.</p>
+  </div>
+
+  <div class="v-summary" id="v-summary">
+    <!-- generato da JS -->
+  </div>
+
+  <div class="verifica-list" id="verifica-list">
+    <!-- generato da JS -->
+  </div>
+
+  <div class="bot">
+    <button class="btn ghost" onclick="goScreen('preview')">← Indietro</button>
+    <button class="btn primary" onclick="sendAll()">
+      Genera CAD →
+    </button>
+  </div>
+</div>
+
+<!-- ── S-IMPORT: IMPORTA FILE PLY ── -->
+<div class="screen" id="s-import">
+  <div style="padding:14px 16px 10px;background:var(--bg2);
+              border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div style="font-size:17px;font-weight:700;margin-bottom:3px;">Importa scansione</div>
+    <div style="font-size:12px;color:var(--text2);">
+      Esporta il file .ply da Scaniverse e selezionalo qui
+    </div>
+  </div>
+
+  <div class="import-screen" style="overflow-y:auto;">
+
+    <!-- Zona drop/sfoglia -->
+    <div class="import-zone" id="import-zone"
+         onclick="document.getElementById('ply-input').click()"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave(event)"
+         ondrop="onDrop(event)">
+      <div class="import-icon" id="import-icon">📂</div>
+      <div class="import-title" id="import-title">Seleziona file .ply</div>
+      <div class="import-sub" id="import-sub">
+        Tocca per sfogliare i file<br>oppure trascina il file qui
+      </div>
+      <input type="file" id="ply-input" accept=".ply,.npy"
+             style="display:none" onchange="onFileSelected(this.files[0])">
+    </div>
+
+    <!-- Info file selezionato -->
+    <div class="import-file-info" id="import-file-info" style="display:none;">
+      <span class="fi-ico">📦</span>
+      <span class="fi-name" id="fi-name">---</span>
+      <span class="fi-size" id="fi-size">---</span>
+    </div>
+
+    <!-- Tips Scaniverse -->
+    <div class="import-tips">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);
+                  text-transform:uppercase;letter-spacing:0.5px;
+                  text-align:left;width:100%;">
+        Come esportare da Scaniverse
+      </div>
+      <div class="import-tip">
+        <span class="ti">1️⃣</span>
+        <span>Apri Scaniverse e seleziona la scansione della stanza</span>
+      </div>
+      <div class="import-tip">
+        <span class="ti">2️⃣</span>
+        <span>Premi <strong>···</strong> → <strong>Export</strong> → <strong>PLY</strong></span>
+      </div>
+      <div class="import-tip">
+        <span class="ti">3️⃣</span>
+        <span>Salva su <strong>Files</strong> del telefono o condividi via WhatsApp</span>
+      </div>
+      <div class="import-tip">
+        <span class="ti">4️⃣</span>
+        <span>Torna qui e seleziona il file .ply appena salvato</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bot">
+    <button class="btn ghost" onclick="goScreen('welcome')">← Indietro</button>
+    <button class="btn primary" id="btn-analyze"
+            onclick="analyzeFile()" disabled>
+      Analizza →
+    </button>
+  </div>
+</div>
+
+<!-- ── S0: WELCOME ── -->
+<div class="screen active" id="s-welcome">
+  <div style="flex:1;overflow-y:auto;">
+    <div class="welcome-hero">
+      <div class="welcome-icon">📐</div>
+      <div class="welcome-title">Layout<em>Sync</em></div>
+      <p class="welcome-sub">Trasforma una stanza in un disegno CAD in meno di 10 minuti</p>
+    </div>
+
+    <div class="welcome-steps">
+      <div class="w-step">
+        <div class="w-step-num">1</div>
+        <div class="w-step-body">
+          <strong>Disegna la pianta</strong>
+          <span>Traccia le pareti a dito. Aggiungi porte, finestre e impianti.</span>
+        </div>
+      </div>
+      <div class="w-step">
+        <div class="w-step-num">2</div>
+        <div class="w-step-body">
+          <strong>Fotografa le pareti</strong>
+          <span>Scatta una foto per ogni parete. L'AI analizza automaticamente gli elementi.</span>
+        </div>
+      </div>
+      <div class="w-step">
+        <div class="w-step-num">3</div>
+        <div class="w-step-body">
+          <strong>Inserisci le misure critiche</strong>
+          <span>Solo 4–6 misure con il metro. Il sistema gestisce il resto.</span>
+        </div>
+      </div>
+      <div class="w-step">
+        <div class="w-step-num">4</div>
+        <div class="w-step-body">
+          <strong>Scarica il file CAD</strong>
+          <span>DXF, alzati, sezione e report PDF pronti in meno di 30 secondi.</span>
+        </div>
+      </div>
+    </div>
+
+      <div class="welcome-bot">
+        <button class="btn primary" style="width:100%;margin-bottom:10px"
+                onclick="startFlow()">
+          📐 Inizia rilievo completo →
+        </button>
+        <button class="btn ghost" style="width:100%"
+                onclick="resetImport();goScreen('import')">
+          📂 Importa file .ply da Scaniverse
+        </button>
+      </div>
+  </div>
+</div>
+
+<!-- ── S1: DISEGNO ── -->
+<div class="screen" id="s-draw">
+  <div class="toolbar">
+    <button class="t-btn on"  id="tb-wall"    onclick="tool('wall')"><span class="i">📐</span>Parete</button>
+    <button class="t-btn"     id="tb-door"    onclick="tool('door')"><span class="i">🚪</span>Porta</button>
+    <button class="t-btn"     id="tb-window"  onclick="tool('window')"><span class="i">🪟</span>Finestra</button>
+    <button class="t-btn"     id="tb-drain"   onclick="tool('drain')"><span class="i">🔵</span>Scarico</button>
+    <button class="t-btn"     id="tb-gas"     onclick="tool('gas')"><span class="i">🟡</span>Gas</button>
+    <button class="t-btn"     id="tb-electric" onclick="tool('electric')"><span class="i">🔴</span>Elettrico</button>
+    <button class="t-btn"     id="tb-pillar"  onclick="tool('pillar')"><span class="i">⬛</span>Pilastro</button>
+    <button class="t-btn"     id="tb-erase"   onclick="tool('erase')"><span class="i">🗑</span>Cancella</button>
+  </div>
+  <div id="cvs-wrap">
+    <canvas id="cvs"></canvas>
+    <div class="cvs-tip" id="cvs-tip">Tocca e trascina per disegnare una parete</div>
+  </div>
+
+    <div class="sketch-controls">
+      <button class="sketch-undo" onclick="undoSketch()">↩ Annulla</button>
+      <span class="sketch-info" id="sketch-info-txt">Disegna le pareti a mano libera</span>
+      <button class="sketch-close-btn" onclick="chiudiPoligono()">Chiudi stanza ⬡</button>
+    </div>
+  <div class="bot">
+    <button class="btn ghost" onclick="clearDraw()">Ricomincia</button>
+    <button class="btn primary" id="btn-draw-next" onclick="goCamera()" disabled>Fotografa →</button>
+  </div>
+</div>
+
+<!-- ── S2: FOTOCAMERA ── -->
+<div class="screen" id="s-camera">
+  <div class="cam-header">
+    <h2>Fotografa le pareti</h2>
+    <p>Seleziona una parete, poi scatta. Tieni il telefono dritto e a 1.5m di distanza.</p>
+  </div>
+  <div class="cam-walls" id="cam-walls"></div>
+  <div id="cam-view">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="cam-canvas"></canvas>
+    <div class="cam-overlay">
+      <div class="cam-corner tl"></div>
+      <div class="cam-corner tr"></div>
+      <div class="cam-corner bl"></div>
+      <div class="cam-corner br"></div>
+      <div class="cam-label" id="cam-lbl">Parete NORD</div>
+    </div>
+    <div class="cam-shutter" onclick="scatta()">
+      <div class="cam-shutter-inner"></div>
+    </div>
+    <div class="cam-preview-strip" id="preview-strip"></div>
+  </div>
+  <div class="bot">
+    <button class="btn ghost" onclick="stopCam();goScreen('draw')">← Indietro</button>
+    <button class="btn primary" id="btn-cam-next" onclick="stopCam();goMeasures()" disabled>Misure →</button>
+  </div>
+</div>
+
+<!-- ── S3: MISURE ── -->
+<div class="screen" id="s-measures">
+  <div class="sec-header">
+    <h2>Misure critiche</h2>
+    <p>Usa il metro fisico per queste misure. Sono le uniche necessarie per raggiungere ±5mm.</p>
+  </div>
+  <div class="m-list" id="m-list"></div>
+  <div class="bot">
+    <button class="btn ghost" onclick="goScreen('camera')">← Indietro</button>
+    <button class="btn primary" onclick="sendAll()">Invia al server →</button>
+  </div>
+</div>
+
+<!-- ── S4: ELABORAZIONE ── -->
+<div class="screen" id="s-proc">
+  <div class="proc-anim">
+    <div class="proc-ring"></div>
+    <div class="proc-ring2"></div>
+    <div class="proc-icon-center">⚙️</div>
+  </div>
+  <div>
+    <div class="proc-title">Elaborazione</div>
+    <div class="proc-sub" id="proc-sub">Connessione al server...</div>
+  </div>
+  <div class="proc-list">
+    <div class="p-step" id="ps0"><span class="pi">📡</span> Invio dati al server</div>
+    <div class="p-step" id="ps1"><span class="pi">🔍</span> Estrazione pareti</div>
+    <div class="p-step" id="ps2"><span class="pi">📐</span> Generazione DXF</div>
+    <div class="p-step" id="ps3"><span class="pi">🖼️</span> Rendering alzati</div>
+    <div class="p-step" id="ps4"><span class="pi">📄</span> Compilazione PDF</div>
+  </div>
+</div>
+
+<!-- ── S5: RISULTATI ── -->
+<div class="screen" id="s-results">
+  <div style="flex:1;overflow-y:auto;">
+    <div class="res-hero">
+      <div class="res-badge">✅ Rilievo completato</div>
+      <div class="res-title">File CAD pronti</div>
+      <div class="res-time" id="res-time">Elaborato in -- secondi</div>
+    </div>
+
+    <div class="res-grid">
+      <div class="res-stat"><span class="v" id="rv-w">--</span><span class="l">Larghezza netta</span></div>
+      <div class="res-stat"><span class="v" id="rv-l">--</span><span class="l">Lunghezza netta</span></div>
+      <div class="res-stat"><span class="v" id="rv-e">±3cm</span><span class="l">Precisione</span></div>
+      <div class="res-stat"><span class="v" id="rv-a">--</span><span class="l">Anomalie</span></div>
+    </div>
+
+    <div class="res-section" id="anom-sec" style="display:none">
+      <h3>⚠️ Anomalie</h3>
+      <div id="anom-list"></div>
+    </div>
+
+    <div class="res-section">
+      <h3>File generati</h3>
+              <div class="file-card" onclick="apri3D()" style="border-color:rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);">
+        <span class="f-ico">🧊</span>
+        <div class="f-info">
+          <strong>Vista 3D interattiva</strong>
+          <span>Ruota · Zoom · 5 viste · Diagonali · Angoli</span>
+        </div>
+        <span class="f-arr" style="color:#a855f7;">→</span>
+      </div>
+    <div class="file-card" onclick="dlZip()">
+        <span class="f-ico">📦</span>
+        <div class="f-info">
+          <strong>Pacchetto completo .ZIP</strong>
+          <span>Pianta DXF · 4 Alzati · Sezione A-A · PDF · Fotorilievo</span>
+        </div>
+        <span class="f-arr">↓</span>
+      </div>
+    </div>
+
+    <div style="padding:0 16px 32px;">
+      <button class="btn ghost" style="width:100%;margin-bottom:10px" onclick="nuovoRilievo()">
+        + Nuovo rilievo
+      </button>
+    </div>
+  </div>
+  <div class="bot">
+    <button class="btn primary" style="width:100%" onclick="dlZip()">⬇ Scarica tutto</button>
+  </div>
+</div>
+
+
+<!-- ── S6: VISTA 3D ── -->
+<div class="screen" id="s-3d">
+  <div style="display:flex;flex-direction:column;height:100%;background:#0a0e1a;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:10px 14px;background:rgba(10,14,26,0.9);
+                border-bottom:1px solid #1e2d47;flex-shrink:0;">
+      <div style="font-size:13px;font-weight:600;color:#2dd4bf;">Vista 3D interattiva</div>
+      <div style="display:flex;gap:6px;" id="view-btns">
+        <button class="vb on" onclick="sv('3d',this)">3D</button>
+        <button class="vb"    onclick="sv('top',this)">Pianta</button>
+        <button class="vb"    onclick="sv('nord',this)">Nord</button>
+        <button class="vb"    onclick="sv('est',this)">Est</button>
+        <button class="vb"    onclick="sv('diag',this)">Diag.</button>
+      </div>
+    </div>
+
+    <div id="squadro-pill" style="position:absolute;top:112px;left:12px;z-index:20;
+         padding:6px 12px;border-radius:8px;font-size:11px;font-weight:600;
+         backdrop-filter:blur(8px);border:1px solid;display:none;"></div>
+
+    <canvas id="c3d" style="flex:1;width:100%;display:block;touch-action:none;"></canvas>
+
+    <div style="display:flex;gap:12px;padding:10px 14px;overflow-x:auto;
+                background:rgba(10,14,26,0.9);border-top:1px solid #1e2d47;
+                flex-shrink:0;scrollbar-width:none;">
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <span id="i3-w" style="font-family:JetBrains Mono,monospace;font-size:13px;
+              font-weight:500;color:#2dd4bf;">--</span>
+        <span style="font-size:10px;color:#475569;">Larghezza</span>
+      </div>
+      <div style="width:1px;background:#1e2d47;flex-shrink:0;"></div>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <span id="i3-l" style="font-family:JetBrains Mono,monospace;font-size:13px;
+              font-weight:500;color:#2dd4bf;">--</span>
+        <span style="font-size:10px;color:#475569;">Lunghezza</span>
+      </div>
+      <div style="width:1px;background:#1e2d47;flex-shrink:0;"></div>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <span id="i3-dac" style="font-family:JetBrains Mono,monospace;font-size:13px;
+              font-weight:500;color:#a855f7;">--</span>
+        <span style="font-size:10px;color:#475569;">Diag. AC</span>
+      </div>
+      <div style="width:1px;background:#1e2d47;flex-shrink:0;"></div>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <span id="i3-dbd" style="font-family:JetBrains Mono,monospace;font-size:13px;
+              font-weight:500;color:#f97316;">--</span>
+        <span style="font-size:10px;color:#475569;">Diag. BD</span>
+      </div>
+      <div style="width:1px;background:#1e2d47;flex-shrink:0;"></div>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <span id="i3-diff" style="font-family:JetBrains Mono,monospace;font-size:13px;
+              font-weight:500;color:#f59e0b;">--</span>
+        <span style="font-size:10px;color:#475569;">Δ Diag.</span>
+      </div>
+    </div>
+
+    <div class="bot">
+      <button class="btn ghost" onclick="goScreen('results')">← Risultati</button>
+      <button class="btn primary" onclick="dlZip()">⬇ Scarica tutto</button>
+    </div>
+  </div>
+</div>
+</div><!-- /main -->
+
+<!-- PHOTO MODAL -->
+<div id="photo-modal">
+  <img id="modal-img" src="" alt="">
+  <div id="photo-modal-label"></div>
+  <button id="photo-modal-close" onclick="closeModal()">Chiudi</button>
+</div>
+
+<!-- CONFIG SHEET -->
+<div id="cfg-overlay" onclick="cfgOutside(event)">
+  <div id="cfg-sheet">
+    <div class="cfg-handle"></div>
+    <h3>⚙️ Server LayoutSync</h3>
+    <p>Inserisci l'indirizzo del tuo server. Deve essere raggiungibile dalla stessa rete WiFi.</p>
+    <input class="cfg-inp" id="cfg-url" type="url" placeholder="http://192.168.1.82:8000">
+    <button class="btn primary" style="width:100%" onclick="saveCfg()">Salva e verifica</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATO
+// ─────────────────────────────────────────────
+let SERVER   = localStorage.getItem('ls_srv') || 'http://192.168.1.82:8000';
+let curTool  = 'wall';
+let walls    = [];
+let elements = [];
+let drawing  = false;
+let startPt  = null;
+let photos   = {};      // {NORD: dataURL, SUD: ..., EST: ..., OVEST: ...}
+let measures = {};
+let zipBlob  = null;
+let zipName  = 'layoutsync_output.zip';
+let stream   = null;
+let curWall  = 'NORD';
+const WALL_NAMES = ['NORD','SUD','EST','OVEST'];
+
+// ─────────────────────────────────────────────
+// SPLASH
+// ─────────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.getElementById('cfg-url').value = SERVER;
+  checkServer();
+  setInterval(checkServer, 20000);
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('out');
+    setTimeout(() => document.getElementById('splash').remove(), 600);
+  }, 1400);
+});
+
+// ─────────────────────────────────────────────
+// CANVAS SETUP
+// ─────────────────────────────────────────────
+const cvs  = document.getElementById('cvs');
+const ctx  = cvs.getContext('2d');
+const wrap = document.getElementById('cvs-wrap');
+
+function resizeCvs() {
+  cvs.width  = wrap.offsetWidth;
+  cvs.height = wrap.offsetHeight;
+  redraw();
+}
+window.addEventListener('resize', resizeCvs);
+
+function pt(e) {
+  const r   = cvs.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - r.left, y: src.clientY - r.top };
+}
+function sn(v, g=20) { return Math.round(v/g)*g; }
+
+cvs.addEventListener('mousedown',  dn); cvs.addEventListener('touchstart', dn, {passive:false});
+cvs.addEventListener('mousemove',  mv); cvs.addEventListener('touchmove',  mv, {passive:false});
+cvs.addEventListener('mouseup',    up); cvs.addEventListener('touchend',   up);
+
+function dn(e) {
+  e.preventDefault();
+  const p = pt(e);
+  const sx = sn(p.x), sy = sn(p.y);
+  if (curTool === 'wall') {
+    drawing = true; startPt = {x:sx,y:sy};
+    document.getElementById('cvs-tip').style.opacity = '0';
+  } else if (curTool === 'erase') {
+    eraseAt(sx,sy);
+  } else {
+    elements.push({type:curTool, x:sx, y:sy});
+    redraw(); updateBtn();
+  }
+}
+function mv(e) {
+  e.preventDefault();
+  if (!drawing || curTool !== 'wall') return;
+  const p = pt(e);
+  redraw();
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(45,212,191,0.7)';
+  ctx.lineWidth   = 2.5; ctx.setLineDash([6,4]);
+  ctx.moveTo(startPt.x, startPt.y);
+  ctx.lineTo(sn(p.x), sn(p.y));
+  ctx.stroke(); ctx.setLineDash([]);
+}
+function up(e) {
+  e.preventDefault();
+  if (!drawing || curTool !== 'wall') return;
+  const src = e.changedTouches ? e.changedTouches[0] : e;
+  const ex = sn(src.clientX - cvs.getBoundingClientRect().left);
+  const ey = sn(src.clientY - cvs.getBoundingClientRect().top);
+  if (Math.hypot(ex-startPt.x, ey-startPt.y) > 25) {
+    walls.push({x1:startPt.x,y1:startPt.y,x2:ex,y2:ey});
+    updateBtn();
+  }
+  drawing = false; redraw();
+}
+function eraseAt(x,y) {
+  walls    = walls.filter(w=>Math.hypot((w.x1+w.x2)/2-x,(w.y1+w.y2)/2-y)>35);
+  elements = elements.filter(el=>Math.hypot(el.x-x,el.y-y)>25);
+  redraw(); updateBtn();
+}
+
+const EL = {
+  door:    {c:'#F39C12', l:'🚪'},
+  window:  {c:'#85c1e9', l:'🪟'},
+  drain:   {c:'#3498db', l:'SA'},
+  gas:     {c:'#f1c40f', l:'G'},
+  electric:{c:'#e74c3c', l:'E'},
+  pillar:  {c:'#94a3b8', l:'P'},
+};
+
+function redraw() {
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  // Griglia
+  ctx.strokeStyle = '#1a2540'; ctx.lineWidth = 0.5;
+  for(let x=0;x<cvs.width;x+=20){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cvs.height);ctx.stroke();}
+  for(let y=0;y<cvs.height;y+=20){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cvs.width,y);ctx.stroke();}
+  // Pareti
+  walls.forEach(w=>{
+    ctx.beginPath();
+    ctx.strokeStyle='rgba(45,212,191,0.12)'; ctx.lineWidth=10; ctx.lineCap='round';
+    ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke();
+    ctx.beginPath();
+    ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=3.5;
+    ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke();
+    [[w.x1,w.y1],[w.x2,w.y2]].forEach(([px,py])=>{
+      ctx.beginPath(); ctx.fillStyle='#2dd4bf';
+      ctx.arc(px,py,4.5,0,Math.PI*2); ctx.fill();
+    });
+    const m = (Math.hypot(w.x2-w.x1,w.y2-w.y1)/cvs.width*5).toFixed(2);
+    ctx.fillStyle='#2dd4bf'; ctx.font='500 11px JetBrains Mono,monospace';
+    ctx.textAlign='center';
+    ctx.fillText(`~${m}m`,(w.x1+w.x2)/2,(w.y1+w.y2)/2-9);
+  });
+  // Elementi
+  elements.forEach(el=>{
+    const s=EL[el.type]; if(!s) return;
+    ctx.beginPath();
+    ctx.fillStyle=s.c+'28'; ctx.strokeStyle=s.c; ctx.lineWidth=2;
+    ctx.arc(el.x,el.y,15,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=s.c; ctx.font='bold 10px Inter,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(s.l,el.x,el.y); ctx.textBaseline='alphabetic';
+  });
+}
+
+function updateBtn() {
+  document.getElementById('btn-draw-next').disabled = walls.length < 3;
+}
+function clearDraw() {
+  walls=[]; elements=[]; drawing=false; startPt=null;
+  document.getElementById('cvs-tip').style.opacity='1';
+  redraw(); updateBtn();
+}
+function tool(t) {
+  curTool=t;
+  document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tb-'+t).classList.add('on');
+}
+
+// ─────────────────────────────────────────────
+// FOTOCAMERA
+// ─────────────────────────────────────────────
+async function goCamera() {
+  buildWallChips();
+  goScreen('camera');
+  await startCam();
+}
+
+function buildWallChips() {
+  const cont = document.getElementById('cam-walls');
+  cont.innerHTML='';
+  WALL_NAMES.forEach((n,i)=>{
+    const chip = document.createElement('div');
+    chip.className='wall-chip'+(i===0?' active':'');
+    chip.id='chip-'+n;
+    chip.textContent=(photos[n]?'✓ ':'')+n;
+    chip.onclick=()=>selectWall(n);
+    cont.appendChild(chip);
+  });
+  selectWall('NORD');
+}
+
+function selectWall(name) {
+  curWall=name;
+  WALL_NAMES.forEach(n=>{
+    const c=document.getElementById('chip-'+n);
+    if(!c) return;
+    c.className='wall-chip'+(photos[n]?' done':'')+(n===name?' active':'');
+  });
+  document.getElementById('cam-lbl').textContent='Parete '+name;
+}
+
+async function startCam() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}},
+      audio:false
+    });
+    document.getElementById('video').srcObject = stream;
+  } catch(err) {
+    toast('⚠ Fotocamera non disponibile: '+err.message);
+  }
+}
+
+function stopCam() {
+  if(stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  document.getElementById('video').srcObject=null;
+}
+
+function scatta() {
+  const video  = document.getElementById('video');
+  const tmpCvs = document.getElementById('cam-canvas');
+  tmpCvs.width  = video.videoWidth  || 640;
+  tmpCvs.height = video.videoHeight || 480;
+  const c = tmpCvs.getContext('2d');
+  c.drawImage(video,0,0);
+
+  // Overlay HUD
+  c.fillStyle='rgba(0,0,0,0.6)'; c.fillRect(0,0,tmpCvs.width,44);
+  c.fillStyle='#2dd4bf'; c.font='bold 15px Inter,sans-serif';
+  c.fillText(`LayoutSync  |  Parete ${curWall}`, 14, 28);
+
+  const dataURL = tmpCvs.toDataURL('image/jpeg', 0.92);
+  photos[curWall] = dataURL;
+
+  // Aggiorna chip
+  const chip = document.getElementById('chip-'+curWall);
+  if(chip) { chip.textContent='✓ '+curWall; chip.className='wall-chip done'; }
+
+  // Aggiorna preview strip
+  const strip = document.getElementById('preview-strip');
+  let thumb = document.getElementById('thumb-'+curWall);
+  if(!thumb) {
+    thumb=document.createElement('img');
+    thumb.className='cam-thumb'; thumb.id='thumb-'+curWall;
+    thumb.onclick=()=>showModal(dataURL,'Parete '+curWall);
+    strip.appendChild(thumb);
+  }
+  thumb.src=dataURL;
+
+  // Auto-avanza alla parete successiva
+  const idx=WALL_NAMES.indexOf(curWall);
+  if(idx<WALL_NAMES.length-1) selectWall(WALL_NAMES[idx+1]);
+
+  // Abilita next se almeno 1 foto
+  document.getElementById('btn-cam-next').disabled=false;
+  toast('📸 Parete '+curWall+' acquisita');
+}
+
+// ─────────────────────────────────────────────
+// MISURE
+// ─────────────────────────────────────────────
+function goMeasures() {
+  buildMeasures();
+  goScreen('measures');
+}
+
+function buildMeasures() {
+  let xMin=Infinity,xMax=-Infinity,yMin=Infinity,yMax=-Infinity;
+  walls.forEach(w=>{
+    xMin=Math.min(xMin,w.x1,w.x2); xMax=Math.max(xMax,w.x1,w.x2);
+    yMin=Math.min(yMin,w.y1,w.y2); yMax=Math.max(yMax,w.y1,w.y2);
+  });
+  const sc = 5/cvs.width;
+  const eW = ((xMax-xMin)*sc).toFixed(2);
+  const eL = ((yMax-yMin)*sc).toFixed(2);
+
+  const list = [
+    {id:'w', label:'Larghezza stanza', desc:'Da parete a parete — lato corto', icon:'📏', est:eW, conf:70, unit:'m', required:true},
+    {id:'l', label:'Lunghezza stanza', desc:'Da parete a parete — lato lungo',  icon:'📏', est:eL, conf:68, unit:'m', required:true},
+    {id:'h', label:'Altezza soffitto', desc:'Da pavimento a soffitto',           icon:'↕️', est:'2.70', conf:55, unit:'m', required:true},
+  ];
+
+  const tipi=elements.map(e=>e.type);
+  if(tipi.includes('drain')) {
+    list.push({id:'drain_x',label:'Scarico — distanza angolo sx',desc:'Misura in cm dall\'angolo sinistro',icon:'🔵',est:'--',conf:35,unit:'cm',required:true});
+    list.push({id:'drain_z',label:'Scarico — altezza da pavimento',desc:'Quota dal pavimento finito',icon:'🔵',est:'10',conf:50,unit:'cm',required:true});
+  }
+  if(tipi.includes('gas'))
+    list.push({id:'gas_x',label:'Gas — distanza angolo sx',desc:'Misura in cm dall\'angolo sinistro',icon:'🟡',est:'--',conf:35,unit:'cm',required:true});
+  if(tipi.includes('window')) {
+    list.push({id:'fin_w',label:'Finestra — larghezza luce',desc:'Larghezza interna del vano',icon:'🪟',est:'--',conf:58,unit:'cm',required:true});
+    list.push({id:'fin_dav',label:'Finestra — altezza davanzale',desc:'Da pavimento al davanzale',icon:'🪟',est:'90',conf:55,unit:'cm',required:true});
+    list.push({id:'fin_arc',label:'Finestra — altezza architrave',desc:'Da pavimento all\'architrave',icon:'🪟',est:'210',conf:55,unit:'cm',required:true});
+  }
+  if(tipi.includes('door'))
+    list.push({id:'door_w',label:'Porta — larghezza luce',desc:'Larghezza interna del vano porta',icon:'🚪',est:'90',conf:62,unit:'cm',required:false});
+
+  const cont=document.getElementById('m-list');
+  cont.innerHTML='';
+  window._mlist=list;
+
+  list.forEach(m=>{
+    const card=document.createElement('div');
+    card.className='m-card need'; card.id='mc-'+m.id;
+    const clo=m.conf<60?'lo':'hi';
+    const clt=m.conf<60?`⚠ Bassa (${m.conf}%)`:`✓ ${m.conf}%`;
+    card.innerHTML=`
+      <div class="m-card-top">
+        <div class="m-ico warn">${m.icon}</div>
+        <div class="m-info">
+          <strong>${m.label}</strong>
+          <span>${m.desc}</span>
+        </div>
+        <span class="m-tag ${m.required?'manual':'auto'}">${m.required?'Metro':'Auto'}</span>
+      </div>
+      ${m.est!=='--'?`
+      <div class="m-arcore">
+        <span>Stima AI:</span>
+        <span class="v">${m.est} ${m.unit}</span>
+        <span class="c ${clo}">${clt}</span>
+      </div>`:`
+      <div class="m-arcore">⚠ Non rilevabile — inserisci manualmente</div>`}
+      <div class="m-row">
+        <input class="m-inp" id="mi-${m.id}" type="number" step="0.01" min="0"
+               placeholder="${m.required?'Misura con metro...':m.est+' '+m.unit}"
+               oninput="onInp('${m.id}')">
+        <span class="m-unit">${m.unit}</span>
+        <button class="m-ok" id="mok-${m.id}" onclick="confirmM('${m.id}','${m.unit}')">✓</button>
+      </div>`;
+    cont.appendChild(card);
+  });
+}
+
+function onInp(id) {
+  const v=document.getElementById('mi-'+id).value;
+  document.getElementById('mok-'+id).style.opacity=v?'1':'0.4';
+}
+function confirmM(id,unit) {
+  const v=document.getElementById('mi-'+id).value;
+  if(!v) return;
+  measures[id]=parseFloat(v);
+  document.getElementById('mc-'+id).className='m-card done';
+  const btn=document.getElementById('mok-'+id);
+  btn.classList.add('confirmed'); btn.textContent='✅';
+  toast('✓ Misura salvata');
+}
+
+// ─────────────────────────────────────────────
+// INVIO SERVER
+// ─────────────────────────────────────────────
+async function sendAll() {
+  goScreen('proc');
+  const steps=['ps0','ps1','ps2','ps3','ps4'];
+  let si=0;
+  function nxt(sub) {
+    if(si>0) document.getElementById(steps[si-1]).className='p-step done';
+    if(si<steps.length) document.getElementById(steps[si]).className='p-step on';
+    si++;
+    if(sub) document.getElementById('proc-sub').textContent=sub;
+  }
+  nxt('Connessione al server...');
+  const t0=Date.now();
+  try {
+    const timers=[
+      setTimeout(()=>nxt('Analisi geometria...'),1500),
+      setTimeout(()=>nxt('Generazione DXF...'),3500),
+      setTimeout(()=>nxt('Rendering alzati...'),6000),
+      setTimeout(()=>nxt('Compilazione PDF...'),8500),
+    ];
+    const resp=await fetch(`${SERVER}/demo`);
+    timers.forEach(clearTimeout);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    zipBlob=await resp.blob();
+    zipName=resp.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1]||'layoutsync_output.zip';
+    const elapsed=((Date.now()-t0)/1000).toFixed(1);
+    const anom=resp.headers.get('x-anomalie')||'0';
+    const larg=resp.headers.get('x-larghezza-rilevata')||measures['w']||'--';
+    const lung=resp.headers.get('x-lunghezza-rilevata')||measures['l']||'--';
+    steps.forEach(s=>document.getElementById(s).className='p-step done');
+    await new Promise(r=>setTimeout(r,500));
+    showResults(elapsed,anom,larg,lung);
+  } catch(err) {
+    goScreen('measures');
+    toast('❌ Errore server: '+err.message);
+  }
+}
+
+function showResults(elapsed,anom,larg,lung) {
+  document.getElementById('res-time').textContent=`Elaborato in ${elapsed} secondi`;
+  document.getElementById('rv-w').textContent=larg?`${larg}m`:'--';
+  document.getElementById('rv-l').textContent=lung?`${lung}m`:'--';
+  document.getElementById('rv-a').textContent=anom;
+  if(parseInt(anom)>0) {
+    document.getElementById('anom-sec').style.display='block';
+    document.getElementById('anom-list').innerHTML=`
+      <div class="anom-card">
+        <strong>⚠ ${anom} anomali${anom==='1'?'a':'e'} rilevat${anom==='1'?'a':'e'}</strong>
+        <span>Scarica il report PDF per i dettagli e le correzioni consigliate.</span>
+      </div>`;
+  }
+  goScreen('results');
+}
+
+function dlZip() {
+  if(!zipBlob){ toast('Nessun file disponibile'); return; }
+  const url=URL.createObjectURL(zipBlob);
+  const a=document.createElement('a');
+  a.href=url; a.download=zipName; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function nuovoRilievo() {
+  clearDraw(); photos={}; measures={}; zipBlob=null;
+  document.getElementById('btn-cam-next').disabled=true;
+  goScreen('welcome');
+}
+
+// ─────────────────────────────────────────────
+// NAVIGAZIONE
+// ─────────────────────────────────────────────
+const SCREENS=['welcome','draw','camera','measures','proc','results','3d'];
+const LABELS =['START','PIANTA','FOTO','MISURE','ELABORA','RISULTATI','3D'];
+let curSi=0;
+
+function startFlow() {
+  resizeCvs();
+  goScreen('draw');
+}
+
+function goScreen(name) {
+  const ni=SCREENS.indexOf(name);
+  const prev=document.querySelector('.screen.active');
+  if(prev) {
+    prev.classList.remove('active');
+    prev.classList.add(ni<curSi?'':'back');
+    setTimeout(()=>prev.classList.remove('back'),300);
+  }
+  document.getElementById('s-'+name).classList.add('active');
+  curSi=ni;
+  // Progress
+  for(let i=0;i<5;i++) {
+    const el=document.getElementById('pg'+i);
+    el.className='prog-seg'+(i<ni?' done':(i===ni?' active':''));
+  }
+}
+
+// ─────────────────────────────────────────────
+// SERVER STATUS
+// ─────────────────────────────────────────────
+async function checkServer() {
+  const dot=document.getElementById('sdot');
+  const txt=document.getElementById('stxt');
+  try {
+    const r=await fetch(`${SERVER}/status`,{signal:AbortSignal.timeout(4000)});
+    if(r.ok){ dot.className='dot on'; txt.textContent='online'; }
+    else throw new Error();
+  } catch {
+    dot.className='dot off'; txt.textContent='offline';
+  }
+}
+
+function openCfg() { document.getElementById('cfg-overlay').classList.add('open'); }
+function cfgOutside(e) { if(e.target.id==='cfg-overlay') document.getElementById('cfg-overlay').classList.remove('open'); }
+async function saveCfg() {
+  SERVER=document.getElementById('cfg-url').value.trim();
+  localStorage.setItem('ls_srv',SERVER);
+  document.getElementById('cfg-overlay').classList.remove('open');
+  await checkServer();
+  toast('✓ Server aggiornato');
+}
+
+// ─────────────────────────────────────────────
+// MODAL + TOAST
+// ─────────────────────────────────────────────
+function showModal(src,label) {
+  document.getElementById('modal-img').src=src;
+  document.getElementById('photo-modal-label').textContent=label;
+  document.getElementById('photo-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('photo-modal').classList.remove('open'); }
+
+let toastT=null;
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),2500);
+}
+</script>
+
+<script>
+// ─────────────────────────────────────────────
+// MOTORE 3D
+// ─────────────────────────────────────────────
+
+let _3dReady=false, _3dData=null;
+let _rotX=0.42, _rotY=0.55, _zoom=1.0;
+let _camX=0, _camY=0;
+let _drag=false, _lx=0, _ly=0, _pinch=0;
+let _curView='3d';
+
+function init3D(data) {
+  _3dData=data; _3dReady=true;
+  const cvs=document.getElementById('c3d');
+  const wrap=cvs.parentElement;
+
+  // Aggiorna info bar
+  document.getElementById('i3-w').textContent=data.W.toFixed(2)+'m';
+  document.getElementById('i3-l').textContent=data.L.toFixed(2)+'m';
+  document.getElementById('i3-dac').textContent=data.diagAC.toFixed(3)+'m';
+  document.getElementById('i3-dbd').textContent=data.diagBD.toFixed(3)+'m';
+  const diff=Math.abs(data.diagAC-data.diagBD)*1000;
+  document.getElementById('i3-diff').textContent=diff.toFixed(0)+'mm';
+
+  // Badge squadro
+  const pill=document.getElementById('squadro-pill');
+  const stato=diff<3?'OTTIMO':diff<10?'ACCETTABILE':diff<20?'ATTENZIONE':'CRITICO';
+  const bc=diff<3?'#10b981':diff<10?'#2dd4bf':diff<20?'#f59e0b':'#ef4444';
+  pill.style.background=bc+'22';
+  pill.style.borderColor=bc;
+  pill.style.color=bc;
+  pill.textContent='Squadro: '+stato;
+  pill.style.display='block';
+
+  resize3D();
+}
+
+function resize3D() {
+  if(!_3dReady) return;
+  const cvs=document.getElementById('c3d');
+  cvs.width=cvs.offsetWidth;
+  cvs.height=cvs.offsetHeight;
+  draw3D();
+}
+
+function pr3(x,y,z) {
+  if(!_3dData) return [0,0,0];
+  const d=_3dData;
+  const tx=x-d.W/2, ty=y-d.H/2, tz=z-d.L/2;
+  const rx=tx*Math.cos(_rotY)-tz*Math.sin(_rotY);
+  const rz=tx*Math.sin(_rotY)+tz*Math.cos(_rotY);
+  const ry2=ty*Math.cos(_rotX)-rz*Math.sin(_rotX);
+  const rz2=ty*Math.sin(_rotX)+rz*Math.cos(_rotX);
+  const fov=450*_zoom;
+  const dd=fov/(fov+rz2+8);
+  const cvs=document.getElementById('c3d');
+  return [cvs.width/2+_camX*80+rx*dd*55,
+          cvs.height/2+_camY*80-ry2*dd*55, rz2];
+}
+
+function ln3(ctx,x1,y1,z1,x2,y2,z2,col,lw,dash) {
+  const [px1,py1]=pr3(x1,y1,z1);
+  const [px2,py2]=pr3(x2,y2,z2);
+  ctx.beginPath();
+  ctx.strokeStyle=col; ctx.lineWidth=lw||1.5;
+  ctx.setLineDash(dash||[]);
+  ctx.moveTo(px1,py1); ctx.lineTo(px2,py2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function pn3(ctx,pts,col,alpha) {
+  const projected=pts.map(p=>pr3(...p));
+  ctx.beginPath();
+  ctx.moveTo(projected[0][0],projected[0][1]);
+  projected.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+  ctx.closePath();
+  const hex=Math.round((alpha||0.08)*255).toString(16).padStart(2,'0');
+  ctx.fillStyle=col+hex; ctx.fill();
+}
+
+function lb3(ctx,x,y,z,txt,col,sz) {
+  const [px,py]=pr3(x,y,z);
+  sz=sz||10;
+  ctx.font=`500 ${sz}px JetBrains Mono,monospace`;
+  const tw=ctx.measureText(txt).width+8;
+  ctx.fillStyle='rgba(10,14,26,0.8)';
+  ctx.fillRect(px-tw/2,py-sz/2-3,tw,sz+6);
+  ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(txt,px,py);
+}
+
+function dt3(ctx,x,y,z,r,col) {
+  const [px,py]=pr3(x,y,z);
+  ctx.beginPath(); ctx.fillStyle=col;
+  ctx.arc(px,py,r,0,Math.PI*2); ctx.fill();
+}
+
+function draw3D() {
+  if(!_3dReady||!_3dData) return;
+  const cvs=document.getElementById('c3d');
+  const ctx=cvs.getContext('2d');
+  const d=_3dData;
+  const W=d.W, L=d.L, H=d.H;
+
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+
+  // Sfondo
+  const g=ctx.createLinearGradient(0,0,0,cvs.height);
+  g.addColorStop(0,'#0d1117'); g.addColorStop(1,'#0a0e1a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,cvs.width,cvs.height);
+
+  // Griglia pavimento
+  ctx.globalAlpha=0.12;
+  for(let x=0;x<=W;x+=0.5) ln3(ctx,x,0,0,x,0,L,'#2dd4bf',0.5);
+  for(let z=0;z<=L;z+=0.5) ln3(ctx,0,0,z,W,0,z,'#2dd4bf',0.5);
+  ctx.globalAlpha=1;
+
+  const ds=Math.tan((d.difetti.parete_sud_scarto_gradi||0)*Math.PI/180)*H;
+  const do_=Math.tan((d.difetti.parete_ovest_scarto_gradi||0)*Math.PI/180)*H;
+
+  const wc_sud  =(d.difetti.parete_sud_scarto_gradi||0)>0.3?'#f59e0b':'#e2e8f0';
+  const wc_ovest=(d.difetti.parete_ovest_scarto_gradi||0)>0.3?'#f59e0b':'#e2e8f0';
+
+  // Pareti — pannelli
+  pn3(ctx,[[ds,0,0],[W,0,0],[W,H,0],[ds,H,0]],wc_sud,0.07);
+  pn3(ctx,[[do_,0,L],[W,0,L],[W,H,L],[do_,H,L]],'#e2e8f0',0.07);
+  pn3(ctx,[[W,0,0],[W,0,L],[W,H,L],[W,H,0]],'#e2e8f0',0.06);
+  pn3(ctx,[[0,0,0],[do_,0,L],[do_,H,L],[0,H,0]],wc_ovest,0.07);
+
+  // Spigoli pareti
+  [[ds,0,0,W,0,0,wc_sud],[W,0,0,W,0,L,'#e2e8f0'],[do_,0,L,W,0,L,'#e2e8f0'],
+   [0,0,0,do_,0,L,wc_ovest],[ds,H,0,W,H,0,wc_sud],[W,H,0,W,H,L,'#e2e8f0'],
+   [do_,H,L,W,H,L,'#e2e8f0'],[0,H,0,do_,H,L,wc_ovest],
+   [ds,0,0,ds,H,0,wc_sud],[W,0,0,W,H,0,wc_sud],
+   [W,0,L,W,H,L,'#e2e8f0'],[do_,0,L,do_,H,L,'#e2e8f0'],
+   [0,0,0,0,H,0,wc_ovest]
+  ].forEach(([x1,y1,z1,x2,y2,z2,c])=>ln3(ctx,x1,y1,z1,x2,y2,z2,c,2.5));
+
+  // Soffitto tratteggiato
+  [[0,H,0,W,H,0],[W,H,0,W,H,L],[W,H,L,do_,H,L],[do_,H,L,0,H,0]]
+  .forEach(([x1,y1,z1,x2,y2,z2])=>ln3(ctx,x1,y1,z1,x2,y2,z2,'#475569',1,[4,4]));
+
+  // DIAGONALI SUL PAVIMENTO
+  ln3(ctx,0,0.02,0, W,0.02,L,'#a855f7',2,[8,4]);
+  ln3(ctx,W,0.02,0, do_,0.02,L,'#f97316',2,[8,4]);
+  lb3(ctx,W/2,0.15,L/2,d.diagAC.toFixed(3)+'m','#a855f7',9);
+  lb3(ctx,(W+do_)/2,0.15,L/2,d.diagBD.toFixed(3)+'m','#f97316',9);
+
+  // FINESTRA
+  if(d.finestra) {
+    const f=d.finestra;
+    const fo=f.offset_sx||0.9, fl=f.larghezza||1.2;
+    const fh0=f.altezza_base||0.9, fh1=f.altezza_top||2.10;
+    pn3(ctx,[[fo,fh0,L],[fo+fl,fh0,L],[fo+fl,fh1,L],[fo,fh1,L]],'#85c1e9',0.35);
+    [[fo,fh0,L,fo+fl,fh0,L],[fo,fh1,L,fo+fl,fh1,L],
+     [fo,fh0,L,fo,fh1,L],[fo+fl,fh0,L,fo+fl,fh1,L],
+     [fo+fl/2,fh0,L,fo+fl/2,fh1,L]
+    ].forEach(([x1,y1,z1,x2,y2,z2])=>ln3(ctx,x1,y1,z1,x2,y2,z2,'#3b82f6',2));
+    lb3(ctx,fo+fl/2,(fh0+fh1)/2,L+0.05,'FIN.','#3b82f6',9);
+  }
+
+  // PORTA
+  if(d.porta) {
+    const p=d.porta;
+    const po=p.offset_sx||0.6, pl=p.larghezza||0.9, ph=p.altezza||2.10;
+    pn3(ctx,[[W,0,po],[W,0,po+pl],[W,ph,po+pl],[W,ph,po]],'#8B6914',0.5);
+    [[W,0,po,W,ph,po],[W,0,po+pl,W,ph,po+pl],[W,ph,po,W,ph,po+pl]]
+    .forEach(([x1,y1,z1,x2,y2,z2])=>ln3(ctx,x1,y1,z1,x2,y2,z2,'#F39C12',2));
+    lb3(ctx,W,ph/2,po+pl/2,'PORTA','#F39C12',9);
+  }
+
+  // IMPIANTI
+  const IC={'scarico_acqua':'#3b82f6','presa_gas':'#f1c40f','presa_elettrica':'#ef4444'};
+  const IS={'scarico_acqua':'SA','presa_gas':'G','presa_elettrica':'E'};
+  (d.impianti||[]).forEach(imp=>{
+    const col=IC[imp.tipo]||'white', sig=IS[imp.tipo]||'?', iz=imp.z||0.30;
+    let px_,pz_;
+    if(imp.parete==='sud')  {px_=imp.x;pz_=0.05;}
+    else if(imp.parete==='nord'){px_=imp.x;pz_=L-0.05;}
+    else if(imp.parete==='est') {px_=W-0.05;pz_=imp.x;}
+    else                        {px_=0.05;pz_=imp.x;}
+    dt3(ctx,px_,iz,pz_,8,col);
+    lb3(ctx,px_,iz+0.18,pz_,sig,col,9);
+  });
+
+  // QUOTE
+  ln3(ctx,0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
+  lb3(ctx,W/2,0,-0.45,W.toFixed(2)+'m','#ef4444',9);
+  ln3(ctx,W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
+  lb3(ctx,W+0.42,0,L/2,L.toFixed(2)+'m','#ef4444',9);
+  ln3(ctx,-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
+  lb3(ctx,-0.45,H/2,0,H.toFixed(2)+'m','#94a3b8',9);
+
+  // Misure interne nette
+  const nw=W-0.60, nl=L-0.60;
+  ln3(ctx,0.30,0.01,L/2,W-0.30,0.01,L/2,'#2dd4bf',1.5,[4,3]);
+  lb3(ctx,W/2,0.12,L/2,'netto '+nw.toFixed(2)+'m','#2dd4bf',9);
+
+  // ANGOLI
+  const angP={SW:[0,0,0],SE:[W,0,0],NE:[W,0,L],NW:[do_,0,L]};
+  Object.entries(d.angoli||{}).forEach(([nome,ang])=>{
+    const p=angP[nome]; if(!p) return;
+    const sc=Math.abs(ang-90);
+    const c=sc<0.5?'#10b981':sc<1.5?'#f59e0b':'#ef4444';
+    dt3(ctx,p[0],p[1],p[2],6,c);
+    lb3(ctx,p[0],0.22,p[2],ang.toFixed(1)+'°',c,9);
+  });
+}
+
+// Controls
+function setup3DControls() {
+  const cvs=document.getElementById('c3d');
+  if(!cvs) return;
+  cvs.addEventListener('mousedown',e=>{_drag=true;_lx=e.clientX;_ly=e.clientY;});
+  cvs.addEventListener('mousemove',e=>{
+    if(!_drag) return;
+    _rotY+=(e.clientX-_lx)*0.009; _rotX+=(e.clientY-_ly)*0.009;
+    _lx=e.clientX; _ly=e.clientY; draw3D();
+  });
+  cvs.addEventListener('mouseup',()=>_drag=false);
+  cvs.addEventListener('wheel',e=>{_zoom*=e.deltaY>0?0.91:1.09;_zoom=Math.max(0.3,Math.min(5,_zoom));draw3D();});
+  cvs.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(e.touches.length===1){_drag=true;_lx=e.touches[0].clientX;_ly=e.touches[0].clientY;}
+    if(e.touches.length===2){_pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+  },{passive:false});
+  cvs.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(e.touches.length===1&&_drag){
+      _rotY+=(e.touches[0].clientX-_lx)*0.009;
+      _rotX+=(e.touches[0].clientY-_ly)*0.009;
+      _lx=e.touches[0].clientX; _ly=e.touches[0].clientY; draw3D();
+    }
+    if(e.touches.length===2){
+      const d2=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _zoom*=d2/_pinch; _zoom=Math.max(0.3,Math.min(5,_zoom));
+      _pinch=d2; draw3D();
+    }
+  },{passive:false});
+  cvs.addEventListener('touchend',()=>_drag=false);
+
+  window.addEventListener('resize',()=>{
+    if(currentScreen==='3d') resize3D();
+  });
+}
+
+function sv(v,btn) {
+  _curView=v;
+  document.querySelectorAll('.vb').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  _camX=0; _camY=0;
+  if(v==='3d')   {_rotX=0.42;_rotY=0.55;_zoom=1.0;}
+  if(v==='top')  {_rotX=Math.PI/2-0.01;_rotY=0.0;_zoom=1.3;}
+  if(v==='nord') {_rotX=0.0;_rotY=Math.PI;_zoom=1.2;}
+  if(v==='est')  {_rotX=0.0;_rotY=Math.PI/2;_zoom=1.2;}
+  if(v==='diag') {_rotX=0.35;_rotY=0.75;_zoom=1.0;}
+  draw3D();
+}
+
+function go3D(data) {
+  init3D(data);
+  setup3DControls();
+  goScreen('3d');
+  setTimeout(()=>{
+    let r=0;
+    function anim(){if(r<0.55){_rotY=r;r+=0.015;draw3D();requestAnimationFrame(anim);}else draw3D();}
+    anim();
+  },100);
+}
+</script>
+
+<script>
+function apri3D() {
+  // Costruisce i dati 3D dalle misure inserite e dalla pianta disegnata
+  let xMin=Infinity,xMax=-Infinity,yMin=Infinity,yMax=-Infinity;
+  walls.forEach(w=>{
+    xMin=Math.min(xMin,w.x1,w.x2); xMax=Math.max(xMax,w.x1,w.x2);
+    yMin=Math.min(yMin,w.y1,w.y2); yMax=Math.max(yMax,w.y1,w.y2);
+  });
+  const sc=5/cvs.width;
+  const W3=parseFloat(measures['w'])||((xMax-xMin)*sc)||3.85;
+  const L3=parseFloat(measures['l'])||((yMax-yMin)*sc)||4.20;
+  const H3=parseFloat(measures['h'])||2.70;
+
+  // Calcola diagonali
+  const diagAC=Math.hypot(W3,L3);
+  const diagBD=Math.hypot(W3,L3); // semplificato — uguale se quadrata
+  // Fuori squadro simulato dagli elementi disegnati
+  const hasFuoriSquadro=elements.some(e=>e.type==='wall');
+
+  const data3D = {
+    W:W3, L:L3, H:H3,
+    diagAC: diagAC,
+    diagBD: diagBD * (1 - 0.002), // simulazione leggero fuori squadro
+    difetti: {
+      parete_sud_scarto_gradi:  0.7,
+      parete_ovest_scarto_gradi:0.8,
+    },
+    angoli: { SW:89.5, SE:90.0, NE:90.0, NW:90.5 },
+    impianti: elements.filter(e=>['drain','gas','electric'].includes(e.type)).map(e=>({
+      tipo: e.type==='drain'?'scarico_acqua':e.type==='gas'?'presa_gas':'presa_elettrica',
+      x: e.x/cvs.width*W3,
+      z: e.y/cvs.height*L3,
+      parete: 'sud',
+    })),
+    finestra: elements.some(e=>e.type==='window')?{
+      offset_sx:0.9, larghezza:parseFloat(measures['fin_w'])/100||1.2,
+      altezza_base:parseFloat(measures['fin_dav'])/100||0.9,
+      altezza_top: parseFloat(measures['fin_arc'])/100||2.10,
+    }:null,
+    porta: elements.some(e=>e.type==='door')?{
+      offset_sx:0.6,
+      larghezza:parseFloat(measures['door_w'])/100||0.9,
+      altezza:2.10,
+    }:null,
+  };
+
+  go3D(data3D);
+}
+</script>
+
+<script>
+// ─────────────────────────────────────────────
+// IMPORTAZIONE FILE PLY
+// ─────────────────────────────────────────────
+
+let importedFile = null;
+let importedData = null;
+
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('import-zone').classList.add('dragover');
+}
+function onDragLeave(e) {
+  document.getElementById('import-zone').classList.remove('dragover');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('import-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if(file) onFileSelected(file);
+}
+
+function onFileSelected(file) {
+  if(!file) return;
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(!['ply','npy'].includes(ext)) {
+    toast('⚠ Seleziona un file .ply o .npy');
+    return;
+  }
+
+  importedFile = file;
+  const sizeKB = (file.size/1024).toFixed(0);
+  const sizeTxt = file.size>1048576 ?
+    (file.size/1048576).toFixed(1)+' MB' : sizeKB+' KB';
+
+  // Aggiorna UI zona
+  const zone = document.getElementById('import-zone');
+  zone.classList.add('loaded');
+  document.getElementById('import-icon').textContent = '✅';
+  document.getElementById('import-title').textContent = 'File caricato';
+  document.getElementById('import-sub').textContent =
+    'Premi "Analizza" per inviare al server';
+
+  // Info file
+  document.getElementById('import-file-info').style.display='flex';
+  document.getElementById('fi-name').textContent = file.name;
+  document.getElementById('fi-size').textContent = sizeTxt;
+
+  // Abilita bottone
+  document.getElementById('btn-analyze').disabled = false;
+  toast('✅ '+file.name+' ('+sizeTxt+')');
+}
+
+async function analyzeFile() {
+  if(!importedFile) return;
+
+  showScanPreview(); return; // preview prima dell'analisi
+
+  const steps=['ps0','ps1','ps2','ps3','ps4'];
+  let si=0;
+  function nxt(sub) {
+    if(si>0) document.getElementById(steps[si-1]).className='p-step done';
+    if(si<steps.length) document.getElementById(steps[si]).className='p-step on';
+    si++;
+    if(sub) document.getElementById('proc-sub').textContent=sub;
+  }
+
+  nxt('Invio file al server...');
+  const t0 = Date.now();
+
+  try {
+    // Crea metadata stanza di default
+    // In produzione questi verrebbero dal disegno a dito
+    const metaObj = {
+      stanza: {
+        larghezza: parseFloat(measures['w'])  || 3.85,
+        profondita:parseFloat(measures['l'])  || 4.20,
+        altezza:   parseFloat(measures['h'])  || 2.70,
+        difetti:   {},
+        impianti:  elements.filter(e=>
+          ['drain','gas','electric'].includes(e.type)
+        ).map(e=>({
+          tipo: e.type==='drain'?'scarico_acqua':
+                e.type==='gas'?'presa_gas':'presa_elettrica',
+          x: (e.x/cvs.width*(parseFloat(measures['w'])||3.85)),
+          parete:'sud', z:0.30
+        })),
+        porta:    elements.some(e=>e.type==='door')?
+          {parete:'est',offset_sx:0.6,larghezza:0.9,altezza:2.10}:null,
+        finestra: elements.some(e=>e.type==='window')?
+          {parete:'nord',offset_sx:0.9,larghezza:1.2,
+           altezza_base:0.9,altezza_top:2.10}:null,
+      }
+    };
+
+    // Prepara FormData
+    const formData = new FormData();
+
+    if(importedFile.name.endsWith('.ply')) {
+      // File PLY — il server lo accetta direttamente
+      // Per ora usiamo /demo che simula la pipeline
+      // In produzione aggiungeremo endpoint /analizza-ply
+      setTimeout(()=>nxt('Parsing point cloud...'),1200);
+      setTimeout(()=>nxt('Estrazione pareti...'),2800);
+      setTimeout(()=>nxt('Generazione DXF...'),5000);
+      setTimeout(()=>nxt('Rendering viste...'),7000);
+
+      // Invia al server — usa /demo per la demo
+      // In produzione: POST /analizza con il file .ply reale
+      const resp = await fetch(`${SERVER}/demo`);
+      if(!resp.ok) throw new Error(`Server error ${resp.status}`);
+
+      zipBlob = await resp.blob();
+      zipName = `layoutsync_${importedFile.name.replace('.ply','')}.zip`;
+
+      const elapsed   = ((Date.now()-t0)/1000).toFixed(1);
+      const anomalie  = resp.headers.get('x-anomalie')||'0';
+      const larg      = resp.headers.get('x-larghezza-rilevata')||'--';
+      const lung      = resp.headers.get('x-lunghezza-rilevata')||'--';
+
+      steps.forEach(s=>document.getElementById(s).className='p-step done');
+      await new Promise(r=>setTimeout(r,500));
+      showResults(elapsed, anomalie, larg, lung);
+
+    } else {
+      // File .npy — endpoint /analizza diretto
+      const metaBlob = new Blob(
+        [JSON.stringify(metaObj)], {type:'application/json'}
+      );
+      formData.append('point_cloud', importedFile, 'cloud.npy');
+      formData.append('metadata',    metaBlob,     'meta.json');
+
+      setTimeout(()=>nxt('Parsing point cloud...'),1000);
+      setTimeout(()=>nxt('Estrazione pareti...'),2500);
+      setTimeout(()=>nxt('Generazione DXF...'),4500);
+      setTimeout(()=>nxt('Rendering viste...'),6500);
+
+      const resp = await fetch(`${SERVER}/analizza`, {
+        method:'POST', body:formData
+      });
+      if(!resp.ok) {
+        const err = await resp.text();
+        throw new Error(err);
+      }
+
+      zipBlob = await resp.blob();
+      zipName = resp.headers.get('content-disposition')
+                ?.match(/filename="(.+)"/)?.[1] || 'layoutsync_output.zip';
+
+      const elapsed  = ((Date.now()-t0)/1000).toFixed(1);
+      const anomalie = resp.headers.get('x-anomalie')||'0';
+      const larg     = resp.headers.get('x-larghezza-rilevata')||'--';
+      const lung     = resp.headers.get('x-lunghezza-rilevata')||'--';
+
+      steps.forEach(s=>document.getElementById(s).className='p-step done');
+      await new Promise(r=>setTimeout(r,500));
+      showResults(elapsed, anomalie, larg, lung);
+    }
+
+  } catch(err) {
+    goScreen('import');
+    toast('❌ Errore: '+err.message);
+  }
+}
+
+// Reset import quando si torna alla schermata
+function resetImport() {
+  importedFile=null;
+  document.getElementById('import-zone').className='import-zone';
+  document.getElementById('import-icon').textContent='📂';
+  document.getElementById('import-title').textContent='Seleziona file .ply';
+  document.getElementById('import-sub').textContent=
+    'Tocca per sfogliare i file
+oppure trascina il file qui';
+  document.getElementById('import-file-info').style.display='none';
+  document.getElementById('btn-analyze').disabled=true;
+  document.getElementById('ply-input').value='';
+}
+</script>
+
+<script>
+// ─────────────────────────────────────────────
+// ANTEPRIMA SCAN
+// ─────────────────────────────────────────────
+
+let scanData = null; // dati simulati del point cloud
+
+function showScanPreview() {
+  goScreen('preview');
+  setTimeout(()=>runScanAnalysis(), 300);
+}
+
+function runScanAnalysis() {
+  // Simula analisi point cloud
+  // In produzione: analisi vera del file .ply importato
+  const W_est = 3.85 + (Math.random()-0.5)*0.4;
+  const L_est = 4.20 + (Math.random()-0.5)*0.4;
+  const nPunti= Math.floor(180000 + Math.random()*60000);
+  const qualita= Math.floor(72 + Math.random()*22);
+
+  scanData = {
+    W: W_est, L: L_est,
+    nPunti: nPunti,
+    qualita: qualita,
+    pareti: 4,
+    zone_incerte: qualita < 85 ? ['angolo NW', 'parete OVEST'] : [],
+    zone_mancanti: qualita < 75 ? ['angolo NE'] : [],
+    pilastri_rilevati: Math.random() > 0.5,
+    fuori_squadro: { SUD: 0.7, OVEST: 0.8 },
+  };
+
+  // Aggiorna stats con animazione
+  const puntiStr = nPunti.toLocaleString('it');
+  animateValue('ss-punti', puntiStr);
+  animateValue('ss-pareti', '4 / 4');
+  animateValue('ss-w', W_est.toFixed(2)+'m');
+  animateValue('ss-l', L_est.toFixed(2)+'m');
+  const qLabel = qualita>=90?'Ottima':qualita>=80?'Buona':qualita>=70?'Accettabile':'Bassa';
+  animateValue('ss-q', qLabel);
+
+  // Barra qualità
+  const qColor = qualita>=90?'#10b981':qualita>=80?'#2dd4bf':qualita>=70?'#f59e0b':'#ef4444';
+  const fill = document.getElementById('sqf');
+  fill.style.background = qColor;
+  setTimeout(()=>{ fill.style.width=qualita+'%'; },200);
+  document.getElementById('sql-txt').textContent =
+    qualita>=80 ? 'Scansione di buona qualità' : 'Alcune zone da verificare';
+  document.getElementById('sql-txt').style.color = qColor;
+  document.getElementById('sql-pct').textContent = qualita+'%';
+
+  // Render canvas point cloud simulato
+  setTimeout(()=>renderScanCanvas(scanData), 400);
+}
+
+function animateValue(id, val) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.style.opacity='0';
+  setTimeout(()=>{ el.textContent=val; el.style.opacity='1'; el.style.transition='opacity 0.3s'; },200);
+}
+
+function renderScanCanvas(data) {
+  const wrap = document.getElementById('scan-cvs-wrap');
+  const cvs  = document.getElementById('scan-cvs');
+  cvs.width  = wrap.offsetWidth;
+  cvs.height = wrap.offsetHeight;
+  const ctx  = cvs.getContext('2d');
+
+  ctx.fillStyle = '#060a12';
+  ctx.fillRect(0,0,cvs.width,cvs.height);
+
+  const W=data.W, L=data.L;
+  const pad = 40;
+  const scaleX = (cvs.width-pad*2)  / W;
+  const scaleY = (cvs.height-pad*2) / L;
+  const scale  = Math.min(scaleX, scaleY);
+  const offX   = (cvs.width  - W*scale)/2;
+  const offY   = (cvs.height - L*scale)/2;
+
+  function px(x,y) { return [offX+x*scale, offY+y*scale]; }
+
+  // Punti simulati point cloud
+  const nPts = Math.min(data.nPunti, 3000);
+  for(let i=0;i<nPts;i++) {
+    const side = Math.floor(Math.random()*6);
+    let x,y,col,r=1.2;
+    if(side===0) { x=Math.random()*W; y=Math.random()*0.15; col='#2dd4bf'; }
+    else if(side===1) { x=Math.random()*W; y=L-Math.random()*0.15; col='#2dd4bf'; }
+    else if(side===2) { x=Math.random()*0.15; y=Math.random()*L; col='#2dd4bf'; }
+    else if(side===3) { x=W-Math.random()*0.15; y=Math.random()*L; col='#2dd4bf'; }
+    else { x=Math.random()*W; y=Math.random()*L; col='#1e3a5f'; r=0.8; }
+    const [px2,py2]=px(x,y);
+    ctx.beginPath();
+    ctx.fillStyle=col+Math.floor(Math.random()*80+60).toString(16);
+    ctx.arc(px2,py2,r+Math.random()*0.8,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // Zone incerte (giallo)
+  data.zone_incerte.forEach(zona=>{
+    let zx,zy,zw,zh;
+    if(zona.includes('NW')) {zx=0;zy=L-0.6;zw=0.8;zh=0.6;}
+    else if(zona.includes('NE')) {zx=W-0.8;zy=L-0.6;zw=0.8;zh=0.6;}
+    else if(zona.includes('OVEST')) {zx=0;zy=0;zw=0.2;zh=L;}
+    else {zx=0;zy=0;zw=W;zh=0.2;}
+    const [px1,py1]=px(zx,zy);
+    ctx.fillStyle='rgba(245,158,11,0.12)';
+    ctx.strokeStyle='#f59e0b';
+    ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.fillRect(px1,py1,zw*scale,zh*scale);
+    ctx.strokeRect(px1,py1,zw*scale,zh*scale);
+    ctx.setLineDash([]);
+    ctx.fillStyle='#f59e0b';
+    ctx.font='bold 10px Inter,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('⚠ '+zona,px1+zw*scale/2,py1+zh*scale/2);
+  });
+
+  // Zone mancanti (rosso)
+  data.zone_mancanti.forEach(zona=>{
+    let zx,zy,zw,zh;
+    if(zona.includes('NE')) {zx=W-0.8;zy=L-0.6;zw=0.8;zh=0.6;}
+    else {zx=0;zy=0;zw=0.8;zh=0.6;}
+    const [px1,py1]=px(zx,zy);
+    ctx.fillStyle='rgba(239,68,68,0.12)';
+    ctx.strokeStyle='#ef4444';
+    ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.fillRect(px1,py1,zw*scale,zh*scale);
+    ctx.strokeRect(px1,py1,zw*scale,zh*scale);
+    ctx.setLineDash([]);
+    ctx.fillStyle='#ef4444';
+    ctx.font='bold 10px Inter,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('✗ '+zona,px1+zw*scale/2,py1+zh*scale/2);
+  });
+
+  // Contorno stanza
+  ctx.strokeStyle='rgba(45,212,191,0.5)';
+  ctx.lineWidth=2; ctx.setLineDash([]);
+  const [ox,oy]=px(0,0);
+  ctx.strokeRect(ox,oy,W*scale,L*scale);
+
+  // Fuori squadro
+  Object.entries(data.fuori_squadro||{}).forEach(([parete,gradi])=>{
+    let tx,ty;
+    if(parete==='SUD')   {tx=W/2;ty=-0.3;}
+    else if(parete==='NORD')  {tx=W/2;ty=L+0.2;}
+    else if(parete==='EST')   {tx=W+0.2;ty=L/2;}
+    else                      {tx=-0.4;ty=L/2;}
+    const [tpx,tpy]=px(tx,ty);
+    ctx.fillStyle='#f59e0b';
+    ctx.font='bold 10px Inter,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(`${gradi}°`,tpx,tpy);
+    ctx.textBaseline='alphabetic';
+  });
+
+  // Pilastro
+  if(data.pilastri_rilevati) {
+    const [ppx,ppy]=px(0,0);
+    ctx.fillStyle='rgba(148,163,184,0.3)';
+    ctx.strokeStyle='#94a3b8'; ctx.lineWidth=1.5;
+    ctx.fillRect(ppx,ppy,0.30*scale,0.30*scale);
+    ctx.strokeRect(ppx,ppy,0.30*scale,0.30*scale);
+    ctx.fillStyle='#94a3b8';
+    ctx.font='bold 9px Inter,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('P',ppx+0.15*scale,ppy+0.15*scale+3);
+  }
+
+  // Nord indicator
+  const [nx,ny]=px(W/2, -0.5);
+  ctx.fillStyle='#2dd4bf'; ctx.font='bold 11px Inter,sans-serif';
+  ctx.textAlign='center';
+  if(ny>10) ctx.fillText('N',nx,ny);
+}
+
+// ─────────────────────────────────────────────
+// SCHERMATA VERIFICA
+// ─────────────────────────────────────────────
+
+function goVerifica() {
+  buildVerificaCards();
+  goScreen('verifica');
+}
+
+function buildVerificaCards() {
+  const list    = document.getElementById('verifica-list');
+  const summary = document.getElementById('v-summary');
+  list.innerHTML=''; summary.innerHTML='';
+
+  if(!scanData) scanData={W:3.85,L:4.20,fuori_squadro:{SUD:0.7},pilastri_rilevati:true,zone_incerte:[]};
+
+  // Costruisci cards da analisi scan
+  const cards = [];
+
+  // Misure principali
+  cards.push({
+    tipo:'ok', icon:'↔️',
+    label:'Larghezza stanza',
+    desc:'Rilevata dal point cloud',
+    val_scan: scanData.W.toFixed(3)+'m',
+    src_scan:'Scan ARCore',
+    note:null,
+    id:'w', unit:'m',
+  });
+  cards.push({
+    tipo:'ok', icon:'↕️',
+    label:'Lunghezza stanza',
+    desc:'Rilevata dal point cloud',
+    val_scan:scanData.L.toFixed(3)+'m',
+    src_scan:'Scan ARCore',
+    note:null,
+    id:'l', unit:'m',
+  });
+
+  // Fuori squadro
+  Object.entries(scanData.fuori_squadro||{}).forEach(([parete,gradi])=>{
+    const tipo=gradi>1.5?'critical':'warn';
+    cards.push({
+      tipo:tipo, icon:'📐',
+      label:`Parete ${parete} — fuori squadro ${gradi}°`,
+      desc:`L'AI ha rilevato uno scarto di ${gradi}° dalla verticale. Verifica con foto.`,
+      val_scan:`${gradi}°`,
+      src_scan:'Analisi AI',
+      note:`In fase di posa: lo zoccolo dovrà essere adeguato di ~${(scanData.W*Math.tan(gradi*Math.PI/180)*100).toFixed(1)}cm`,
+      id:`fs_${parete.toLowerCase()}`, unit:'°',
+      foto_parete: parete,
+    });
+  });
+
+  // Pilastro
+  if(scanData.pilastri_rilevati) {
+    cards.push({
+      tipo:'warn', icon:'⬛',
+      label:'Pilastro rilevato — angolo SW',
+      desc:'Dimensioni rilevate: ~30x30cm. Conferma con foto e metro.',
+      val_scan:'30 cm',
+      src_scan:'Stima AI',
+      note:'Misura la profondità e larghezza del pilastro per quote precise nel CAD.',
+      id:'pilastro_sw', unit:'cm',
+      foto_parete:'OVEST',
+    });
+  }
+
+  // Zone incerte
+  (scanData.zone_incerte||[]).forEach(zona=>{
+    cards.push({
+      tipo:'warn', icon:'⚠️',
+      label:`Zona incompleta — ${zona}`,
+      desc:'Questa area ha pochi punti rilevati. Scatta una foto per completare.',
+      val_scan:'--',
+      src_scan:'--',
+      note:'Scatta una foto ravvicinata di questa zona e allegala qui sotto.',
+      id:`zona_${zona.replace(' ','_')}`, unit:'',
+      foto_parete: zona.includes('N')?'NORD':'OVEST',
+    });
+  });
+
+  // Diagonali (sempre da verificare)
+  const diagAC=Math.hypot(scanData.W,scanData.L);
+  const diagBD=diagAC*(1-0.002);
+  const diffMM=Math.abs(diagAC-diagBD)*1000;
+  cards.push({
+    tipo: diffMM>5?'warn':'ok', icon:'↗️',
+    label:`Diagonale — Δ ${diffMM.toFixed(0)}mm`,
+    desc:`AC: ${diagAC.toFixed(3)}m  BD: ${diagBD.toFixed(3)}m. Differenza: ${diffMM.toFixed(0)}mm`,
+    val_scan:`${diffMM.toFixed(0)}mm`,
+    src_scan:'Analisi AI',
+    note: diffMM>5?'Misura entrambe le diagonali col DISTO per certificare lo squadro.':null,
+    id:'diagonali', unit:'mm',
+  });
+
+  // Summary pills
+  const nOk   = cards.filter(c=>c.tipo==='ok').length;
+  const nWarn = cards.filter(c=>c.tipo==='warn').length;
+  const nCrit = cards.filter(c=>c.tipo==='critical').length;
+  if(nOk)   summary.innerHTML+=`<div class="v-sum-pill ok">✅ ${nOk} OK</div>`;
+  if(nWarn) summary.innerHTML+=`<div class="v-sum-pill warn">⚠ ${nWarn} Da verificare</div>`;
+  if(nCrit) summary.innerHTML+=`<div class="v-sum-pill critical">❌ ${nCrit} Critici</div>`;
+
+  // Render cards
+  cards.forEach((c,i)=>{
+    const card=document.createElement('div');
+    card.className=`v-card ${c.tipo}`;
+    card.id=`vc-${c.id}`;
+
+    const hasFoto=!!c.foto_parete;
+    const fotoSrc=photos[c.foto_parete]||null;
+
+    card.innerHTML=`
+      <div class="v-card-header">
+        <div class="v-card-ico ${c.tipo}">${c.icon}</div>
+        <div class="v-card-info">
+          <strong>${c.label}</strong>
+          <span>${c.desc}</span>
+        </div>
+        <span class="v-badge ${c.tipo}">${
+          c.tipo==='ok'?'OK':c.tipo==='warn'?'Verifica':'Critico'}</span>
+      </div>
+      ${c.note?`<div class="v-note">${c.note}</div>`:''}
+      ${hasFoto?`
+      <div class="v-photo-strip">
+        ${fotoSrc?`<img class="v-photo" src="${fotoSrc}"
+             onclick="showModal('${fotoSrc}','Parete ${c.foto_parete}')"
+             alt="Parete ${c.foto_parete}">`:''}
+        <div class="v-photo-add" onclick="scattaVerifica('${c.id}','${c.foto_parete}')">
+          <span class="pai">📸</span>
+          <span>${fotoSrc?'Altra foto':'Scatta foto'}</span>
+        </div>
+        <input type="file" id="vphoto-${c.id}" accept="image/*" capture="environment"
+               style="display:none" onchange="onVerificaPhoto(this,'${c.id}','${c.foto_parete||''}')">
+      </div>`:''}
+      <div class="v-measure-row">
+        <div class="v-measure-detected">
+          <div class="vmd-lbl">Rilevato dallo scan</div>
+          <div class="vmd-val">${c.val_scan}</div>
+          <div class="vmd-src">${c.src_scan}</div>
+        </div>
+        ${c.unit&&c.unit!=='°'?`
+        <span class="v-arrow">→</span>
+        <input class="v-confirm-inp" id="vi-${c.id}"
+               type="number" step="0.001" min="0"
+               placeholder="Conferma"
+               oninput="onVerificaInp('${c.id}')">
+        <button class="v-ok-btn" id="vok-${c.id}"
+                onclick="confirmVerifica('${c.id}','${c.unit}')"
+                style="opacity:0.4">✓</button>`
+        :`<div style="flex:1;font-size:11px;color:var(--text3);padding:0 8px;">
+           Nessuna conferma numerica richiesta</div>`}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  window._vcards=cards;
+}
+
+function scattaVerifica(id, parete) {
+  document.getElementById(`vphoto-${id}`).click();
+}
+
+function onVerificaPhoto(input, id, parete) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const dataURL=e.target.result;
+    if(parete) photos[parete]=dataURL;
+    // Aggiorna foto nella card
+    const strip=document.querySelector(`#vc-${id} .v-photo-strip`);
+    if(strip) {
+      const existing=strip.querySelector('.v-photo');
+      if(existing) { existing.src=dataURL; }
+      else {
+        const img=document.createElement('img');
+        img.className='v-photo'; img.src=dataURL;
+        img.onclick=()=>showModal(dataURL,'Foto verifica');
+        strip.insertBefore(img,strip.firstChild);
+      }
+    }
+    toast('📸 Foto allegata alla verifica');
+  };
+  reader.readAsDataURL(file);
+}
+
+function onVerificaInp(id) {
+  const val=document.getElementById(`vi-${id}`)?.value;
+  const btn=document.getElementById(`vok-${id}`);
+  if(btn) btn.style.opacity=val?'1':'0.4';
+}
+
+function confirmVerifica(id, unit) {
+  const val=parseFloat(document.getElementById(`vi-${id}`)?.value);
+  if(!val||val<=0) return;
+  measures[id]=val;
+  const inp=document.getElementById(`vi-${id}`);
+  const btn=document.getElementById(`vok-${id}`);
+  const card=document.getElementById(`vc-${id}`);
+  if(inp)  inp.classList.add('confirmed');
+  if(btn)  { btn.classList.add('done'); btn.textContent='✅'; }
+  if(card) card.classList.remove('warn','critical');
+  if(card) card.classList.add('ok');
+  toast('✓ Misura confermata');
+}
+</script>
+
+<script>
+function goVerificaAndAnalyze() {
+  buildVerificaCards();
+  goScreen('verifica');
+}
+// Override sendAll per tornare a proc dopo verifica
+const _origSendAll=sendAll;
+</script>
+
+<script>
+// ─────────────────────────────────────────────
+// SKETCH ENGINE — Disegno a mano libera
+// ─────────────────────────────────────────────
+
+const SNAP_DIST      = 28;   // px — distanza snap ai punti esistenti
+const SNAP_ANGLES    = [0, 45, 90, 135, 180, 225, 270, 315];
+const ANGLE_SNAP_DEG = 8;    // gradi — tolleranza snap angolare
+const MIN_LINE_LEN   = 30;   // px — lunghezza minima parete
+const CLOSE_THRESH   = 35;   // px — distanza per chiusura automatica
+
+let sketchPoints  = [];   // tutti i punti della pianta [{x,y}]
+let sketchWalls   = [];   // pareti finalizzate [{p1,p2,len_m}]
+let sketchEls     = [];   // elementi (porta, finestra, ecc.)
+let sketchStroke  = [];   // stroke corrente in disegno
+let sketchDrawing = false;
+let snapPoint     = null; // punto di snap attivo
+let snapAngle     = null; // angolo snap attivo
+let isClosed      = false;
+
+// Scala: canvas width / larghezza stanza stimata (5m default)
+const STANZA_W_DEFAULT = 5.0;
+
+function initSketch() {
+  const cvs  = document.getElementById('cvs');
+  const wrap = document.getElementById('cvs-wrap');
+
+  // Aggiungi indicatori DOM
+  const snapDot = document.createElement('div');
+  snapDot.className='snap-indicator'; snapDot.id='snap-dot';
+  wrap.appendChild(snapDot);
+
+  const angleInd = document.createElement('div');
+  angleInd.className='angle-indicator'; angleInd.id='angle-ind';
+  wrap.appendChild(angleInd);
+
+  // Rimuovi vecchi listener e aggiungi i nuovi
+  cvs.removeEventListener('mousedown', dn);
+  cvs.removeEventListener('touchstart', dn);
+  cvs.removeEventListener('mousemove', mv);
+  cvs.removeEventListener('touchmove', mv);
+  cvs.removeEventListener('mouseup', up);
+  cvs.removeEventListener('touchend', up);
+
+  cvs.addEventListener('mousedown',  skDn);
+  cvs.addEventListener('touchstart', skDn, {passive:false});
+  cvs.addEventListener('mousemove',  skMv);
+  cvs.addEventListener('touchmove',  skMv, {passive:false});
+  cvs.addEventListener('mouseup',    skUp);
+  cvs.addEventListener('touchend',   skUp);
+
+  sketchRedraw();
+}
+
+function skPt(e) {
+  const r   = cvs.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - r.left, y: src.clientY - r.top };
+}
+
+// Trova punto di snap più vicino
+function findSnap(x, y, excludeLast=false) {
+  let best=null, bestD=SNAP_DIST;
+  const pts = excludeLast ? sketchPoints.slice(0,-1) : sketchPoints;
+  pts.forEach(p=>{
+    const d=Math.hypot(p.x-x,p.y-y);
+    if(d<bestD){ bestD=d; best={x:p.x,y:p.y,d:bestD}; }
+  });
+  // Snap al punto iniziale per chiusura
+  if(sketchPoints.length>=2) {
+    const p0=sketchPoints[0];
+    const d=Math.hypot(p0.x-x,p0.y-y);
+    if(d<CLOSE_THRESH){ best={x:p0.x,y:p0.y,d:d,isClose:true}; }
+  }
+  return best;
+}
+
+// Snap angolare dalla posizione di partenza
+function snapAngleFrom(x0, y0, x1, y1) {
+  const dx=x1-x0, dy=y1-y0;
+  const angle=Math.atan2(dy,dx)*180/Math.PI;
+  let best=null, bestDiff=ANGLE_SNAP_DEG;
+  SNAP_ANGLES.forEach(a=>{
+    const diff=Math.abs(((angle-a)+540)%360-180);
+    if(diff<bestDiff){ bestDiff=diff; best=a; }
+  });
+  if(best===null) return {x:x1,y:y1,angle:null};
+  const len=Math.hypot(dx,dy);
+  const rad=best*Math.PI/180;
+  return {
+    x: x0+len*Math.cos(rad),
+    y: y0+len*Math.sin(rad),
+    angle: best
+  };
+}
+
+// Lunghezza in metri (approssimata)
+function pxToM(px) {
+  return (px/cvs.width*STANZA_W_DEFAULT).toFixed(2);
+}
+
+function skDn(e) {
+  e.preventDefault();
+  if(curTool!=='wall'&&curTool!=='erase') {
+    // Elementi puntali — usa vecchia logica
+    const p=skPt(e);
+    if(curTool==='erase') { sketchEraseAt(p.x,p.y); return; }
+    sketchEls.push({type:curTool,x:p.x,y:p.y});
+    sketchRedraw(); updateBtn(); return;
+  }
+  if(curTool==='erase') {
+    const p=skPt(e); sketchEraseAt(p.x,p.y); return;
+  }
+
+  const p=skPt(e);
+  // Controlla snap
+  const snap=findSnap(p.x,p.y);
+  const startPt=snap?{x:snap.x,y:snap.y}:{x:p.x,y:p.y};
+
+  sketchStroke=[startPt];
+  sketchDrawing=true;
+  document.getElementById('cvs-tip').style.opacity='0';
+}
+
+function skMv(e) {
+  e.preventDefault();
+  if(!sketchDrawing||curTool!=='wall') return;
+  const p=skPt(e);
+
+  // Snap angolare dalla posizione di partenza
+  const start=sketchStroke[0];
+  const snapped=snapAngleFrom(start.x,start.y,p.x,p.y);
+
+  // Snap ai punti esistenti
+  const ptSnap=findSnap(snapped.x,snapped.y);
+  const endPt=ptSnap?{x:ptSnap.x,y:ptSnap.y}:snapped;
+
+  snapAngle=snapped.angle;
+  snapPoint=ptSnap?{x:ptSnap.x,y:ptSnap.y,isClose:ptSnap.isClose}:null;
+
+  sketchStroke=[start,endPt];
+
+  // Aggiorna indicatori
+  const snapDot=document.getElementById('snap-dot');
+  const angleInd=document.getElementById('angle-ind');
+
+  if(snapPoint) {
+    snapDot.style.display='block';
+    snapDot.style.left=snapPoint.x+'px';
+    snapDot.style.top=snapPoint.y+'px';
+    snapDot.style.borderColor=snapPoint.isClose?'#10b981':'#2dd4bf';
+    snapDot.style.background=snapPoint.isClose?'rgba(16,185,129,0.2)':'var(--accent-dim)';
+    snapDot.style.width=snapPoint.isClose?'20px':'16px';
+    snapDot.style.height=snapPoint.isClose?'20px':'16px';
+  } else {
+    snapDot.style.display='none';
+  }
+
+  if(snapAngle!==null) {
+    angleInd.style.opacity='1';
+    const len=Math.hypot(endPt.x-start.x,endPt.y-start.y);
+    angleInd.textContent=`${snapAngle}°  ~${pxToM(len)}m`;
+  } else {
+    angleInd.style.opacity='0';
+  }
+
+  sketchRedraw();
+  drawStrokePreview(start,endPt,ptSnap?.isClose);
+}
+
+function skUp(e) {
+  e.preventDefault();
+  if(!sketchDrawing||curTool!=='wall') return;
+  sketchDrawing=false;
+
+  document.getElementById('snap-dot').style.display='none';
+  document.getElementById('angle-ind').style.opacity='0';
+
+  if(sketchStroke.length<2) return;
+
+  const p0=sketchStroke[0], p1=sketchStroke[1];
+  const len=Math.hypot(p1.x-p0.x,p1.y-p0.y);
+  if(len<MIN_LINE_LEN) { sketchRedraw(); return; }
+
+  // Chiusura automatica
+  if(snapPoint?.isClose && sketchPoints.length>=2) {
+    const lastWallEnd=sketchPoints[0];
+    sketchWalls.push({p1:p0,p2:lastWallEnd});
+    isClosed=true;
+    document.querySelector('.sketch-close-btn')?.classList.remove('visible');
+    toast('✅ Stanza chiusa automaticamente');
+  } else {
+    // Raddrizza con animazione
+    animateStraighten(p0,p1,()=>{
+      sketchWalls.push({p1:p0,p2:p1});
+      // Aggiungi punti
+      if(!sketchPoints.find(pt=>Math.hypot(pt.x-p0.x,pt.y-p0.y)<5))
+        sketchPoints.push({x:p0.x,y:p0.y});
+      if(!sketchPoints.find(pt=>Math.hypot(pt.x-p1.x,pt.y-p1.y)<5))
+        sketchPoints.push({x:p1.x,y:p1.y});
+
+      // Mostra bottone chiudi se ci sono abbastanza pareti
+      if(sketchWalls.length>=3 && !isClosed) {
+        document.querySelector('.sketch-close-btn')?.classList.add('visible');
+      }
+      sketchRedraw(); updateBtn();
+    });
+  }
+
+  sketchStroke=[];
+}
+
+function animateStraighten(p0, p1, callback) {
+  // Simula il "raddrizzamento" animato della linea
+  let frame=0, totalFrames=8;
+  const dx=p1.x-p0.x, dy=p1.y-p0.y;
+  const angle=snapAngle!==null ? snapAngle*Math.PI/180 : Math.atan2(dy,dx);
+  const len=Math.hypot(dx,dy);
+  const targetX=p0.x+len*Math.cos(angle);
+  const targetY=p0.y+len*Math.sin(angle);
+
+  function step() {
+    frame++;
+    const t=frame/totalFrames;
+    const ease=1-Math.pow(1-t,3); // ease out cubic
+    const cx=p1.x+(targetX-p1.x)*ease;
+    const cy=p1.y+(targetY-p1.y)*ease;
+    sketchRedraw();
+    // Disegna linea in raddrizzamento
+    const c=cvs.getContext('2d');
+    c.beginPath();
+    c.strokeStyle='#2dd4bf'; c.lineWidth=3; c.lineCap='round';
+    c.moveTo(p0.x,p0.y); c.lineTo(cx,cy); c.stroke();
+    // Punto finale
+    c.beginPath(); c.fillStyle='#2dd4bf';
+    c.arc(cx,cy,5,0,Math.PI*2); c.fill();
+    if(frame<totalFrames) requestAnimationFrame(step);
+    else { p1.x=targetX; p1.y=targetY; callback(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function drawStrokePreview(p0, p1, isClosing) {
+  const c=cvs.getContext('2d');
+  const len=Math.hypot(p1.x-p0.x,p1.y-p0.y);
+  const col=isClosing?'#10b981':'rgba(45,212,191,0.7)';
+
+  c.beginPath();
+  c.strokeStyle=col; c.lineWidth=isClosing?3:2;
+  c.setLineDash(isClosing?[]:[6,4]); c.lineCap='round';
+  c.moveTo(p0.x,p0.y); c.lineTo(p1.x,p1.y); c.stroke();
+  c.setLineDash([]);
+
+  // Misura preview
+  if(len>40) {
+    const mx=(p0.x+p1.x)/2, my=(p0.y+p1.y)/2;
+    c.fillStyle='rgba(10,14,26,0.8)';
+    c.font='500 10px JetBrains Mono,monospace';
+    c.textAlign='center'; c.textBaseline='middle';
+    const tw=c.measureText(`~${pxToM(len)}m`).width+8;
+    c.fillRect(mx-tw/2,my-9,tw,18);
+    c.fillStyle=col; c.fillText(`~${pxToM(len)}m`,mx,my);
+  }
+}
+
+function sketchEraseAt(x,y) {
+  sketchWalls=sketchWalls.filter(w=>{
+    const mx=(w.p1.x+w.p2.x)/2, my=(w.p1.y+w.p2.y)/2;
+    return Math.hypot(mx-x,my-y)>35;
+  });
+  sketchEls=sketchEls.filter(el=>Math.hypot(el.x-x,el.y-y)>25);
+  // Ricalcola punti
+  sketchPoints=[];
+  sketchWalls.forEach(w=>{
+    if(!sketchPoints.find(p=>Math.hypot(p.x-w.p1.x,p.y-w.p1.y)<5))
+      sketchPoints.push({x:w.p1.x,y:w.p1.y});
+    if(!sketchPoints.find(p=>Math.hypot(p.x-w.p2.x,p.y-w.p2.y)<5))
+      sketchPoints.push({x:w.p2.x,y:w.p2.y});
+  });
+  if(sketchWalls.length<3) isClosed=false;
+  sketchRedraw(); updateBtn();
+}
+
+function chiudiPoligono() {
+  if(sketchWalls.length<2) return;
+  const primo=sketchPoints[0];
+  const ultimo=sketchPoints[sketchPoints.length-1];
+  if(Math.hypot(primo.x-ultimo.x,primo.y-ultimo.y)<5) return;
+  sketchWalls.push({p1:ultimo,p2:primo});
+  isClosed=true;
+  document.querySelector('.sketch-close-btn')?.classList.remove('visible');
+  toast('✅ Stanza chiusa');
+  sketchRedraw(); updateBtn();
+}
+
+function undoSketch() {
+  if(sketchWalls.length===0) return;
+  sketchWalls.pop();
+  isClosed=false;
+  // Ricalcola punti
+  sketchPoints=[];
+  sketchWalls.forEach(w=>{
+    if(!sketchPoints.find(p=>Math.hypot(p.x-w.p1.x,p.y-w.p1.y)<5))
+      sketchPoints.push({x:w.p1.x,y:w.p1.y});
+    if(!sketchPoints.find(p=>Math.hypot(p.x-w.p2.x,p.y-w.p2.y)<5))
+      sketchPoints.push({x:w.p2.x,y:w.p2.y});
+  });
+  if(sketchWalls.length<3)
+    document.querySelector('.sketch-close-btn')?.classList.remove('visible');
+  sketchRedraw(); updateBtn();
+  toast('↩ Ultima parete rimossa');
+}
+
+const EL_SK = {
+  door:    {c:'#F39C12',l:'🚪'},
+  window:  {c:'#85c1e9',l:'🪟'},
+  drain:   {c:'#3498db',l:'SA'},
+  gas:     {c:'#f1c40f',l:'G'},
+  electric:{c:'#ef4444',l:'E'},
+  pillar:  {c:'#94a3b8',l:'P'},
+};
+
+function sketchRedraw() {
+  const c=cvs.getContext('2d');
+  c.clearRect(0,0,cvs.width,cvs.height);
+
+  // Griglia
+  c.strokeStyle='#0d1a2d'; c.lineWidth=0.5;
+  for(let x=0;x<cvs.width;x+=24){
+    c.beginPath();c.moveTo(x,0);c.lineTo(x,cvs.height);c.stroke();
+  }
+  for(let y=0;y<cvs.height;y+=24){
+    c.beginPath();c.moveTo(0,y);c.lineTo(cvs.width,y);c.stroke();
+  }
+
+  // Riempimento stanza (se chiusa)
+  if(isClosed && sketchWalls.length>=3) {
+    c.beginPath();
+    c.moveTo(sketchWalls[0].p1.x,sketchWalls[0].p1.y);
+    sketchWalls.forEach(w=>c.lineTo(w.p2.x,w.p2.y));
+    c.closePath();
+    c.fillStyle='rgba(45,212,191,0.04)';
+    c.fill();
+  }
+
+  // Pareti
+  sketchWalls.forEach((w,i)=>{
+    const col=isClosed?'#e2e8f0':'#2dd4bf';
+    // Glow
+    c.beginPath();
+    c.strokeStyle=col+'25'; c.lineWidth=10; c.lineCap='round';
+    c.moveTo(w.p1.x,w.p1.y); c.lineTo(w.p2.x,w.p2.y); c.stroke();
+    // Linea principale
+    c.beginPath();
+    c.strokeStyle=col; c.lineWidth=3.5; c.lineCap='round';
+    c.moveTo(w.p1.x,w.p1.y); c.lineTo(w.p2.x,w.p2.y); c.stroke();
+    // Misura
+    const len=Math.hypot(w.p2.x-w.p1.x,w.p2.y-w.p1.y);
+    if(len>50) {
+      const mx=(w.p1.x+w.p2.x)/2, my=(w.p1.y+w.p2.y)/2;
+      const ang=Math.atan2(w.p2.y-w.p1.y,w.p2.x-w.p1.x);
+      c.save(); c.translate(mx,my); c.rotate(ang);
+      c.fillStyle='rgba(10,14,26,0.8)';
+      c.font='500 10px JetBrains Mono,monospace';
+      c.textAlign='center'; c.textBaseline='bottom';
+      const tw=c.measureText(`~${pxToM(len)}m`).width+6;
+      c.fillRect(-tw/2,-14,tw,13);
+      c.fillStyle='#2dd4bf';
+      c.fillText(`~${pxToM(len)}m`,0,-3);
+      c.restore();
+    }
+  });
+
+  // Punti di connessione
+  sketchPoints.forEach((p,i)=>{
+    const isFirst=i===0;
+    c.beginPath();
+    c.fillStyle=isFirst&&sketchWalls.length>=3&&!isClosed?'#10b981':'#2dd4bf';
+    c.arc(p.x,p.y,isFirst&&sketchWalls.length>=3&&!isClosed?7:5,0,Math.PI*2);
+    c.fill();
+    if(isFirst&&sketchWalls.length>=3&&!isClosed) {
+      c.strokeStyle='rgba(16,185,129,0.4)'; c.lineWidth=2;
+      c.beginPath(); c.arc(p.x,p.y,12,0,Math.PI*2); c.stroke();
+    }
+  });
+
+  // Elementi
+  sketchEls.forEach(el=>{
+    const s=EL_SK[el.type]; if(!s) return;
+    c.beginPath();
+    c.fillStyle=s.c+'30'; c.strokeStyle=s.c; c.lineWidth=2;
+    c.arc(el.x,el.y,15,0,Math.PI*2); c.fill(); c.stroke();
+    c.fillStyle=s.c; c.font='bold 10px Inter,sans-serif';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(s.l,el.x,el.y); c.textBaseline='alphabetic';
+  });
+
+  // Hint primo punto
+  if(sketchWalls.length===0&&!sketchDrawing) {
+    c.fillStyle='rgba(45,212,191,0.15)';
+    c.beginPath(); c.arc(cvs.width/2,cvs.height/2,30,0,Math.PI*2); c.fill();
+    c.strokeStyle='rgba(45,212,191,0.4)'; c.lineWidth=1.5; c.setLineDash([4,4]);
+    c.beginPath(); c.arc(cvs.width/2,cvs.height/2,30,0,Math.PI*2); c.stroke();
+    c.setLineDash([]);
+  }
+}
+
+function updateBtn() {
+  document.getElementById('btn-draw-next').disabled=sketchWalls.length<3;
+}
+
+function clearDraw() {
+  sketchWalls=[]; sketchPoints=[]; sketchEls=[];
+  sketchStroke=[]; sketchDrawing=false; isClosed=false;
+  document.querySelector('.sketch-close-btn')?.classList.remove('visible');
+  document.getElementById('cvs-tip').style.opacity='1';
+  sketchRedraw(); updateBtn();
+}
+
+// Override walls per compatibilità con il resto dell'app
+Object.defineProperty(window,'walls',{
+  get:()=>sketchWalls.map(w=>({x1:w.p1.x,y1:w.p1.y,x2:w.p2.x,y2:w.p2.y})),
+  set:(v)=>{}
+});
+Object.defineProperty(window,'elements',{
+  get:()=>sketchEls,
+  set:(v)=>{ sketchEls=v; }
+});
+
+// Init quando la schermata disegno diventa attiva
+const _origGoScreen=goScreen;
+function goScreen(name) {
+  _origGoScreen(name);
+  if(name==='draw') {
+    setTimeout(()=>{
+      resizeCvs();
+      initSketch();
+    },100);
+  }
+}
+
+// Init immediato se già su draw
+if(document.getElementById('s-draw').classList.contains('active')) {
+  setTimeout(()=>initSketch(),200);
+}
+</script>
+</body>
+</html>
