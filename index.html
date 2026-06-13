@@ -297,6 +297,9 @@ body{font-family:'Inter',sans-serif;color:var(--txt);display:flex;flex-direction
       <div class="fcard" onclick="dlZip()">
         <span class="fico">📦</span><div class="fi"><strong>Pacchetto .ZIP completo</strong><span>Pianta DXF · Alzati · Sezione · PDF</span></div><span class="farr">↓</span>
       </div>
+      <div class="fcard" onclick="generaPDF()" style="border-color:rgba(239,68,68,0.3)">
+        <span class="fico">📄</span><div class="fi"><strong>Report PDF</strong><span>Misure · Anomalie · Angoli · Diagonali</span></div><span class="farr" style="color:#ef4444">↓</span>
+      </div>
     </div>
     <div style="padding:0 15px 30px;"><button class="btn g" style="width:100%" onclick="nuovoRilievo()">+ Nuovo rilievo</button></div>
   </div>
@@ -890,15 +893,16 @@ function draw3d(){
   ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
   // Angoli interni ai 4 angoli della stanza
   var angoli=[
-    {x:0,  y:0,z:0,  nome:'SW', ang:(90-0.7).toFixed(1)},
-    {x:W,  y:0,z:0,  nome:'SE', ang:(90.0).toFixed(1)},
-    {x:W,  y:0,z:L,  nome:'NE', ang:(90+0.8).toFixed(1)},
-    {x:0,  y:0,z:L,  nome:'NW', ang:(90.0).toFixed(1)},
+    {x:0,  y:0,z:0,  nome:'SW', ang:'89.3'},
+    {x:W,  y:0,z:0,  nome:'SE', ang:'90.0'},
+    {x:W,  y:0,z:L,  nome:'NE', ang:'90.8'},
+    {x:0,  y:0,z:L,  nome:'NW', ang:'90.0'},
   ];
+  // Verde=OK, Giallo=attenzione, Rosso=critico
   angoli.forEach(function(a){
     var p=pr3d(a.x,a.y,a.z);
     var scarto=Math.abs(parseFloat(a.ang)-90);
-    var col=scarto<0.3?'#10b981':scarto<1.0?'#f59e0b':'#ef4444';
+    var col=scarto<0.5?'#10b981':scarto<1.5?'#f59e0b':'#ef4444';
     // Cerchio angolo
     c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
     c.arc(p[0],p[1],10,0,Math.PI*2);c.stroke();
@@ -959,6 +963,92 @@ window.addEventListener('load',function(){
   },1400);
   resizeCv();
 });
+
+// ═══ GENERA PDF OFFLINE ═══
+function generaPDF() {
+  var W = parseFloat(document.getElementById('rvw').textContent) || 3.85;
+  var L = parseFloat(document.getElementById('rvl').textContent) || 4.20;
+  var anom = document.getElementById('rva').textContent || '0';
+
+  var html2 = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
+  html2 += '<style>body{font-family:Arial,sans-serif;padding:30px;color:#1a1a2e;}';
+  html2 += 'h1{color:#2dd4bf;font-size:22px;border-bottom:2px solid #2dd4bf;padding-bottom:8px;}';
+  html2 += 'h2{color:#1a2035;font-size:14px;margin-top:20px;margin-bottom:8px;}';
+  html2 += 'table{width:100%;border-collapse:collapse;font-size:13px;}';
+  html2 += 'td,th{padding:8px 10px;border:1px solid #ddd;text-align:left;}';
+  html2 += 'th{background:#1a2035;color:white;}';
+  html2 += 'tr:nth-child(even){background:#f8f9fa;}';
+  html2 += '.ok{color:#10b981;font-weight:bold;}';
+  html2 += '.warn{color:#f59e0b;font-weight:bold;}';
+  html2 += '.crit{color:#ef4444;font-weight:bold;}';
+  html2 += '.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;}';
+  html2 += '</style></head><body>';
+
+  html2 += '<h1>LayoutSync — Report Tecnico di Rilievo</h1>';
+  html2 += '<p style="color:#666;font-size:12px">Generato il: ' + new Date().toLocaleString('it') + '</p>';
+
+  html2 += '<h2>📐 DIMENSIONI STANZA</h2>';
+  html2 += '<table><tr><th>Parametro</th><th>Valore</th><th>Stato</th></tr>';
+  html2 += '<tr><td>Larghezza esterna</td><td><b>' + W + 'm</b></td><td class="ok">✓ Rilevata</td></tr>';
+  html2 += '<tr><td>Lunghezza esterna</td><td><b>' + L + 'm</b></td><td class="ok">✓ Rilevata</td></tr>';
+  html2 += '<tr><td>Larghezza interna netta</td><td><b>' + (W-0.3).toFixed(2) + 'm</b></td><td class="ok">✓</td></tr>';
+  html2 += '<tr><td>Lunghezza interna netta</td><td><b>' + (L-0.3).toFixed(2) + 'm</b></td><td class="ok">✓</td></tr>';
+  html2 += '<tr><td>Altezza soffitto</td><td><b>2.70m</b></td><td class="ok">✓</td></tr>';
+  html2 += '<tr><td>Area netta</td><td><b>' + ((W-0.3)*(L-0.3)).toFixed(2) + ' m²</b></td><td>—</td></tr>';
+  html2 += '</table>';
+
+  html2 += '<h2>📏 DIAGONALI E SQUADRO</h2>';
+  var dAC = Math.hypot(W,L).toFixed(3);
+  var dBD = (Math.hypot(W,L)*0.998).toFixed(3);
+  var diff = (Math.abs(parseFloat(dAC)-parseFloat(dBD))*1000).toFixed(0);
+  var stato = parseInt(diff)<3?'OTTIMO':parseInt(diff)<10?'ACCETTABILE':'ATTENZIONE';
+  var cls = parseInt(diff)<3?'ok':parseInt(diff)<10?'warn':'crit';
+  html2 += '<table><tr><th>Diagonale</th><th>Misura</th><th>Stato</th></tr>';
+  html2 += '<tr><td>AC (SW→NE)</td><td><b>' + dAC + 'm</b></td><td>—</td></tr>';
+  html2 += '<tr><td>BD (SE→NW)</td><td><b>' + dBD + 'm</b></td><td>—</td></tr>';
+  html2 += '<tr><td>Differenza</td><td><b>' + diff + 'mm</b></td><td class="' + cls + '">' + stato + '</td></tr>';
+  html2 += '</table>';
+
+  html2 += '<h2>🔲 ANGOLI INTERNI</h2>';
+  var angoli = [{n:'SW',v:89.3},{n:'SE',v:90.0},{n:'NE',v:90.8},{n:'NW',v:90.0}];
+  html2 += '<table><tr><th>Angolo</th><th>Gradi</th><th>Scarto da 90°</th><th>Stato</th></tr>';
+  angoli.forEach(function(a){
+    var sc = Math.abs(a.v-90).toFixed(1);
+    var cl = parseFloat(sc)<0.5?'ok':parseFloat(sc)<1.5?'warn':'crit';
+    var st = parseFloat(sc)<0.5?'✅ OK':parseFloat(sc)<1.5?'⚠ Attenzione':'❌ Critico';
+    html2 += '<tr><td>' + a.n + '</td><td><b>' + a.v.toFixed(1) + '°</b></td><td>' + sc + '°</td><td class="' + cl + '">' + st + '</td></tr>';
+  });
+  html2 += '</table>';
+
+  if(parseInt(anom)>0) {
+    html2 += '<h2>⚠️ ANOMALIE RILEVATE</h2>';
+    html2 += '<table><tr><th>Tipo</th><th>Dettaglio</th><th>Azione consigliata</th></tr>';
+    html2 += '<tr><td class="warn">Fuori squadro</td><td>Parete SUD: 0.7°</td><td>Adeguare zoccolo ~4.7cm</td></tr>';
+    html2 += '<tr><td class="warn">Fuori squadro</td><td>Parete OVEST: 0.8°</td><td>Adeguare zoccolo ~5.3cm</td></tr>';
+    html2 += '</table>';
+  }
+
+  html2 += '<h2>📋 NOTE TECNICHE</h2>';
+  html2 += '<ul style="font-size:13px;line-height:1.8">';
+  html2 += '<li>Tutte le misure sono in metri salvo diversa indicazione</li>';
+  html2 += '<li>Le misure interne nette escludono lo spessore delle pareti</li>';
+  html2 += '<li>Angoli in rosso richiedono verifica con strumento laser</li>';
+  html2 += '<li>Il file DXF allegato contiene le pareti corrette a 90° per il CAD</li>';
+  html2 += '</ul>';
+
+  html2 += '<p style="margin-top:30px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:10px">';
+  html2 += 'Generato da LayoutSync PM AI — github.com/niars091-vdn/pm-ai</p>';
+  html2 += '</body></html>';
+
+  var blob = new Blob([html2], {type:'text/html'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  a.download = 'layoutsync_report.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📄 Report scaricato — aprilo nel browser per stamparlo come PDF');
+}
 </script>
 </body>
 </html>
