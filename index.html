@@ -972,6 +972,21 @@ body {
 </head>
 <body>
 
+<script>
+function resetImport() {
+  importedFile=null;
+  document.getElementById('import-zone').className='import-zone';
+  document.getElementById('import-icon').textContent='📂';
+  document.getElementById('import-title').textContent='Seleziona file .ply';
+  document.getElementById('import-sub').textContent=
+    'Tocca per sfogliare i file
+oppure trascina il file qui';
+  document.getElementById('import-file-info').style.display='none';
+  document.getElementById('btn-analyze').disabled=true;
+  document.getElementById('ply-input').value='';
+}
+</script>
+
 <!-- SPLASH -->
 <div id="splash">
   <div class="splash-logo">Layout<em>Sync</em></div>
@@ -1443,18 +1458,7 @@ body {
 <div id="toast"></div>
 
 <script>
-function resetImport() {
-  importedFile=null;
-  document.getElementById('import-zone').className='import-zone';
-  document.getElementById('import-icon').textContent='📂';
-  document.getElementById('import-title').textContent='Seleziona file .ply';
-  document.getElementById('import-sub').textContent=
-    'Tocca per sfogliare i file
-oppure trascina il file qui';
-  document.getElementById('import-file-info').style.display='none';
-  document.getElementById('btn-analyze').disabled=true;
-  document.getElementById('ply-input').value='';
-}
+
 // ─────────────────────────────────────────────
 // STATO
 // ─────────────────────────────────────────────
@@ -1728,15 +1732,15 @@ function buildMeasures() {
 
   const tipi=elements.map(e=>e.type);
   if(tipi.includes('drain')) {
-    list.push({id:'drain_x',label:'Scarico — distanza angolo sx',desc:'Misura in cm dall\'angolo sinistro',icon:'🔵',est:'--',conf:35,unit:'cm',required:true});
+    list.push({id:'drain_x',label:'Scarico — distanza angolo sx',desc:'Misura in cm dall'angolo sinistro',icon:'🔵',est:'--',conf:35,unit:'cm',required:true});
     list.push({id:'drain_z',label:'Scarico — altezza da pavimento',desc:'Quota dal pavimento finito',icon:'🔵',est:'10',conf:50,unit:'cm',required:true});
   }
   if(tipi.includes('gas'))
-    list.push({id:'gas_x',label:'Gas — distanza angolo sx',desc:'Misura in cm dall\'angolo sinistro',icon:'🟡',est:'--',conf:35,unit:'cm',required:true});
+    list.push({id:'gas_x',label:'Gas — distanza angolo sx',desc:'Misura in cm dall'angolo sinistro',icon:'🟡',est:'--',conf:35,unit:'cm',required:true});
   if(tipi.includes('window')) {
     list.push({id:'fin_w',label:'Finestra — larghezza luce',desc:'Larghezza interna del vano',icon:'🪟',est:'--',conf:58,unit:'cm',required:true});
     list.push({id:'fin_dav',label:'Finestra — altezza davanzale',desc:'Da pavimento al davanzale',icon:'🪟',est:'90',conf:55,unit:'cm',required:true});
-    list.push({id:'fin_arc',label:'Finestra — altezza architrave',desc:'Da pavimento all\'architrave',icon:'🪟',est:'210',conf:55,unit:'cm',required:true});
+    list.push({id:'fin_arc',label:'Finestra — altezza architrave',desc:'Da pavimento all'architrave',icon:'🪟',est:'210',conf:55,unit:'cm',required:true});
   }
   if(tipi.includes('door'))
     list.push({id:'door_w',label:'Porta — larghezza luce',desc:'Larghezza interna del vano porta',icon:'🚪',est:'90',conf:62,unit:'cm',required:false});
