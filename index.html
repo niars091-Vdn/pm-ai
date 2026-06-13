@@ -307,7 +307,7 @@ body{font-family:'Inter',sans-serif;color:var(--txt);display:flex;flex-direction
 </div>
 
 <!-- 3D -->
-<div class="scr" id="s3">
+<div class="scr" id="s3" style="display:flex;flex-direction:column;height:100%;">
   <div class="v3hdr">
     <div style="font-size:12px;font-weight:600;color:var(--acc)">Vista 3D</div>
     <div class="v3btns">
@@ -317,15 +317,18 @@ body{font-family:'Inter',sans-serif;color:var(--txt);display:flex;flex-direction
       <button class="v3btn" onclick="setV3('est',this)">Est</button>
     </div>
   </div>
-  <canvas id="c3" style="display:block;width:100%;touch-action:none;"></canvas>
+  <canvas id="c3" style="display:block;width:100%;flex:1;min-height:0;touch-action:none;overflow:hidden;"></canvas>
   <div class="i3bar">
-    <div class="i3s"><span class="v" id="i3w">--</span><span class="l">Larghezza</span></div>
+    <button onclick="_zoom*=1.4;_zoom=Math.min(8,_zoom);draw3d();" style="padding:4px 12px;background:var(--sur);border:1px solid var(--brd);border-radius:6px;color:var(--acc);font-size:16px;cursor:pointer;flex-shrink:0;">+</button>
+    <button onclick="_zoom*=0.7;_zoom=Math.max(0.2,_zoom);draw3d();" style="padding:4px 12px;background:var(--sur);border:1px solid var(--brd);border-radius:6px;color:var(--acc);font-size:16px;cursor:pointer;flex-shrink:0;">−</button>
     <div class="idiv"></div>
-    <div class="i3s"><span class="v" id="i3l">--</span><span class="l">Lunghezza</span></div>
+    <div class="i3s"><span class="v" id="i3w">--</span><span class="l">Largh.</span></div>
     <div class="idiv"></div>
-    <div class="i3s"><span class="v" id="i3h">--</span><span class="l">Altezza</span></div>
+    <div class="i3s"><span class="v" id="i3l">--</span><span class="l">Lung.</span></div>
     <div class="idiv"></div>
-    <div class="i3s"><span class="v" id="i3d" style="color:#a855f7">--</span><span class="l">Diag. AC</span></div>
+    <div class="i3s"><span class="v" id="i3h">--</span><span class="l">Alt.</span></div>
+    <div class="idiv"></div>
+    <div class="i3s"><span class="v" id="i3d" style="color:#a855f7">--</span><span class="l">Diag.</span></div>
   </div>
   <div class="bot"><button class="btn g" onclick="goScreen('sw')">🏠</button><button class="btn g" onclick="goScreen('sr')">← Risultati</button><button class="btn p" onclick="dlZip()">⬇ Scarica</button></div>
 </div>
@@ -822,8 +825,14 @@ function go3d() {
 
 function init3d() {
   var c3 = document.getElementById('c3');
-  var wrap = c3.parentElement;
-  c3.width = wrap.offsetWidth; c3.height = wrap.offsetHeight;
+  // Usa getBoundingClientRect per dimensioni reali dopo il layout
+  setTimeout(function() {
+    var r = c3.getBoundingClientRect();
+    c3.width  = r.width  || window.innerWidth;
+    c3.height = r.height || (window.innerHeight - 180);
+    draw3d();
+  }, 50);
+  var c3 = document.getElementById('c3');
   c3.onmousedown = function(e){_d3=true;_lx3=e.clientX;_ly3=e.clientY;};
   c3.onmousemove = function(e){if(!_d3) return;_ry+=(e.clientX-_lx3)*0.009;_rx+=(e.clientY-_ly3)*0.009;_lx3=e.clientX;_ly3=e.clientY;draw3d();};
   c3.onmouseup = function(){_d3=false;};
@@ -893,10 +902,10 @@ function draw3d(){
   ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
   // Angoli interni ai 4 angoli della stanza
   var angoli=[
-    {x:0,  y:0,z:0,  nome:'SW', ang:'89.3'},
-    {x:W,  y:0,z:0,  nome:'SE', ang:'90.0'},
-    {x:W,  y:0,z:L,  nome:'NE', ang:'90.8'},
-    {x:0,  y:0,z:L,  nome:'NW', ang:'90.0'},
+    {x:0,  y:-0.15,z:0,  nome:'SW', ang:'89.3'},
+    {x:W,  y:-0.15,z:0,  nome:'SE', ang:'90.0'},
+    {x:W,  y:0,   z:L,  nome:'NE', ang:'90.8'},
+    {x:0,  y:0,   z:L,  nome:'NW', ang:'90.0'},
   ];
   // Verde=OK, Giallo=attenzione, Rosso=critico
   angoli.forEach(function(a){
@@ -911,7 +920,7 @@ function draw3d(){
     c.font='500 9px JetBrains Mono,monospace';
     c.textAlign='center';c.textBaseline='middle';
     var tw=c.measureText(a.ang+'deg').width+6;
-    var offY=a.z===0?-18:18;
+    var offY=-20;
     c.fillRect(p[0]-tw/2,p[1]+offY-8,tw,16);
     c.fillStyle=col;
     c.fillText(a.ang+'deg',p[0],p[1]+offY);
