@@ -1446,7 +1446,7 @@ body {
 // ─────────────────────────────────────────────
 // STATO
 // ─────────────────────────────────────────────
-let SERVER   = localStorage.getItem('ls_srv') || 'http://192.168.1.82:8000';
+let SERVER   = localStorage.getItem('ls_srv') || '';
 let curTool  = 'wall';
 let walls    = [];
 let elements = [];
@@ -1820,6 +1820,8 @@ async function sendAll() {
 }
 
 function showResults(elapsed,anom,larg,lung) {
+  // Modalità demo — mostra dati simulati se mancanti
+  larg = larg||'3.85'; lung = lung||'4.20'; anom = anom||'2';
   document.getElementById('res-time').textContent=`Elaborato in ${elapsed} secondi`;
   document.getElementById('rv-w').textContent=larg?`${larg}m`:'--';
   document.getElementById('rv-l').textContent=lung?`${lung}m`:'--';
@@ -1884,6 +1886,10 @@ function goScreen(name) {
 async function checkServer() {
   const dot=document.getElementById('sdot');
   const txt=document.getElementById('stxt');
+  if(!SERVER) {
+    dot.className='dot off'; txt.textContent='non configurato';
+    return;
+  }
   try {
     const r=await fetch(`${SERVER}/status`,{signal:AbortSignal.timeout(4000)});
     if(r.ok){ dot.className='dot on'; txt.textContent='online'; }
@@ -2353,7 +2359,15 @@ async function analyzeFile() {
 
       // Invia al server — usa /demo per la demo
       // In produzione: POST /analizza con il file .ply reale
-      const resp = await fetch(`${SERVER}/demo`);
+      if(!SERVER) {
+      // Modalità demo offline
+      await new Promise(r=>setTimeout(r,3000));
+      steps.forEach(s=>document.getElementById(s).className='p-step done');
+      await new Promise(r=>setTimeout(r,400));
+      showResults('3.2','2','3.85','4.20');
+      return;
+    }
+    const resp = await fetch(`${SERVER}/demo`);
       if(!resp.ok) throw new Error(`Server error ${resp.status}`);
 
       zipBlob = await resp.blob();
@@ -3249,16 +3263,18 @@ Object.defineProperty(window,'elements',{
 });
 
 // Init quando la schermata disegno diventa attiva
-const _origGoScreen=goScreen;
-function goScreen(name) {
-  _origGoScreen(name);
-  if(name==='draw') {
-    setTimeout(()=>{
-      resizeCvs();
-      initSketch();
-    },100);
+// goScreen patched inline — no recursive override
+const _goScreenOrig = goScreen;
+window._sketchInited = false;
+const goScreenPatched = function(name) {
+  _goScreenOrig(name);
+  if(name==='draw' && !window._sketchInited) {
+    window._sketchInited = true;
+    setTimeout(()=>{ resizeCvs(); initSketch(); },150);
   }
-}
+};
+// Replace global
+window.goScreen = goScreenPatched;
 
 // Init immediato se già su draw
 if(document.getElementById('s-draw').classList.contains('active')) {
