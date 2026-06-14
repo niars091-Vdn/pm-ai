@@ -775,6 +775,7 @@ function runProc() {
   }
   if (!SERVER) { setTimeout(function(){doneProc('3.85','4.20','2');},3500); return; }
   if (plyFile) {
+    toast('Invio ' + plyFile.name + ' (' + (plyFile.size/1024).toFixed(0) + 'KB) a ' + SERVER + '/analizza-ply');
     var fd = new FormData();
     fd.append('file', plyFile, plyFile.name);
     if (measures['w']) fd.append('larghezza', measures['w']);
@@ -789,7 +790,7 @@ function runProc() {
       return r.blob().then(function(b) { zipBlob=b; zipName='layoutsync.zip'; doneProc(larg,lung,anom); });
     })
     .catch(function(e) {
-      toast('Errore PLY, uso demo');
+      toast('ERRORE /analizza-ply: ' + e.message);
       fetch(SERVER+'/demo').then(function(r2){
         return r2.blob().then(function(b){
           zipBlob=b;
@@ -798,6 +799,7 @@ function runProc() {
       }).catch(function(){doneProc('--','--','0');});
     });
   } else {
+    toast('Nessun file PLY - uso demo');
     fetch(SERVER+'/demo').then(function(r){
       if(!r.ok) throw new Error();
       return r.blob().then(function(b){
