@@ -771,7 +771,9 @@ function runProc() {
     timers.forEach(clearTimeout);
     steps.forEach(function(s) { document.getElementById(s).className = 'ps2 done'; });
     var el = ((Date.now()-t0)/1000).toFixed(1);
-    setTimeout(function() { showResults(el, anom||'0', larg||'--', lung||'--'); }, 400);
+    var info = nPts && nPts !== '?' ? ' · ' + parseInt(nPts).toLocaleString('it') + ' punti' : '';
+    document.getElementById('psub').textContent = 'Completato in ' + el + 's' + info;
+    setTimeout(function() { showResults(el, anom||'0', larg||'--', lung||'--'); }, 800);
   }
   if (!SERVER) { setTimeout(function(){doneProc('3.85','4.20','2');},3500); return; }
   if (plyFile) {
@@ -784,10 +786,18 @@ function runProc() {
     fetch(SERVER + '/analizza-ply', {method:'POST', body:fd})
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      var larg = r.headers.get('x-larghezza-rilevata');
-      var lung = r.headers.get('x-lunghezza-rilevata');
-      var anom = r.headers.get('x-anomalie');
-      return r.blob().then(function(b) { zipBlob=b; zipName='layoutsync.zip'; doneProc(larg,lung,anom); });
+      // Leggi headers PRIMA di consumare il body
+      var larg = r.headers.get('x-larghezza-rilevata') || r.headers.get('X-Larghezza-Rilevata');
+      var lung = r.headers.get('x-lunghezza-rilevata') || r.headers.get('X-Lunghezza-Rilevata');
+      var anom = r.headers.get('x-anomalie') || r.headers.get('X-Anomalie') || '0';
+      var npts = r.headers.get('x-n-punti') || r.headers.get('X-N-Punti') || '?';
+      var elapsed = r.headers.get('x-tempo-elaborazione') || '?';
+      toast('Stanza rilevata: ' + larg + 'm x ' + lung + 'm (' + npts + ' punti)');
+      return r.blob().then(function(b) {
+        zipBlob = b;
+        zipName = 'layoutsync_reale.zip';
+        doneProc(larg, lung, anom, npts);
+      });
     })
     .catch(function(e) {
       toast('ERRORE /analizza-ply: ' + e.message);
