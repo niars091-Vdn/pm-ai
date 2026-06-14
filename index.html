@@ -785,10 +785,10 @@ function runProc() {
   }).catch(function() { doneProc('3.85','4.20','2'); });
 }
 
-function showResults(elapsed, anom, larg, lung) {
-  document.getElementById('rtime').textContent = 'Elaborato in '+elapsed+' secondi';
-  document.getElementById('rvw').textContent = (larg||'3.85')+'m';
-  document.getElementById('rvl').textContent = (lung||'4.20')+'m';
+function showResults(elapsed, anom, larg, lung, nPts) {
+  document.getElementById('rtime').textContent = 'Elaborato in '+elapsed+' sec' + (nPts&&nPts!='?'?' · '+parseInt(nPts).toLocaleString('it')+' punti':'');
+  document.getElementById('rvw').textContent = larg&&larg!='--'?(parseFloat(larg).toFixed(2)+'m'):'--';
+  document.getElementById('rvl').textContent = lung&&lung!='--'?(parseFloat(lung).toFixed(2)+'m'):'--';
   document.getElementById('rva').textContent = anom||'0';
   _3W = parseFloat(larg)||3.85; _3L = parseFloat(lung)||4.20;
   goScreen('sr');
