@@ -788,7 +788,183 @@ function onPly(file) {
   toast('✅ ' + file.name);
 }
 
-function startAnalysis() { goScreen('sp'); setTimeout(runScanAnim, 400); }
+// ═══ PARSER PLY REALE (JavaScript) ═══
+var realPoints = null;  // punti reali letti dal file
+
+function parsePlyBrowser(arrayBuffer) {
+  var bytes = new Uint8Array(arrayBuffer);
+  // Leggi header come testo
+  var headerText = '';
+  var i = 0;
+  while (i < bytes.length && i < 5000) {
+    headerText += String.fromCharCode(bytes[i]);
+    if (headerText.indexOf('end_header') >= 0 && bytes[i] === 10) break;
+    i++;
+  }
+  var headerEnd = i + 1;
+  var lines = headerText.split('\n');
+  var nVerts = 0;
+  var isBinaryLE = false, isBinaryBE = false, isAscii = false;
+  var props = [];
+  for (var j = 0; j < lines.length; j++) {
+    var ln = lines[j].trim();
+    if (ln.indexOf('element vertex') === 0) nVerts = parseInt(ln.split(/\s+/).pop());
+    else if (ln === 'format binary_little_endian 1.0') isBinaryLE = true;
+    else if (ln === 'format binary_big_endian 1.0') isBinaryBE = true;
+    else if (ln === 'format ascii 1.0') isAscii = true;
+    else if (ln.indexOf('property') === 0) props.push(ln.split(/\s+/));
+  }
+  if (nVerts === 0) return null;
+
+  var pts = [];
+  if (isAscii) {
+    var allText = '';
+    for (var k = headerEnd; k < bytes.length; k++) allText += String.fromCharCode(bytes[k]);
+    var dataLines = allText.split('\n');
+    for (var m = 0; m < dataLines.length && pts.length < nVerts; m++) {
+      var parts = dataLines[m].trim().split(/\s+/);
+      if (parts.length >= 3) {
+        var x = parseFloat(parts[0]), y = parseFloat(parts[1]), z = parseFloat(parts[2]);
+        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) pts.push([x, y, z]);
+      }
+    }
+  } else if (isBinaryLE || isBinaryBE) {
+    var dv = new DataView(arrayBuffer);
+    // Calcola stride dai property (assume float32 per x,y,z)
+    var stride = 0;
+    var sizeMap = {'float':4,'float32':4,'double':8,'float64':8,'uchar':1,'uint8':1,'char':1,'int8':1,'short':2,'ushort':2,'int':4,'uint':4};
+    for (var p = 0; p < props.length; p++) {
+      var type = props[p][1];
+      stride += sizeMap[type] || 4;
+    }
+    if (stride === 0) stride = 12;
+    var le = isBinaryLE;
+    var maxRead = Math.min(nVerts, Math.floor((bytes.length - headerEnd) / stride));
+    // Campiona max 4000 punti per performance
+    var step = Math.max(1, Math.floor(maxRead / 4000));
+    for (var v = 0; v < maxRead; v += step) {
+      var off = headerEnd + v * stride;
+      if (off + 12 <= bytes.length) {
+        var px = dv.getFloat32(off, le);
+        var py = dv.getFloat32(off + 4, le);
+        var pz = dv.getFloat32(off + 8, le);
+        if (!isNaN(px) && !isNaN(py) && !isNaN(pz)) pts.push([px, py, pz]);
+      }
+    }
+  }
+  return { points: pts, total: nVerts };
+}
+
+function startAnalysis() {
+  goScreen('sp');
+  if (!plyFile) { setTimeout(runScanAnim, 400); return; }
+  // Leggi il file PLY reale
+  document.getElementById('ql').textContent = 'Lettura file...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var parsed = parsePlyBrowser(e.target.result);
+      if (parsed && parsed.points.length > 10) {
+        realPoints = parsed.points;
+        setTimeout(function() { drawRealScan(parsed.points, parsed.total); }, 300);
+      } else {
+        setTimeout(runScanAnim, 400);
+      }
+    } catch (err) {
+      setTimeout(runScanAnim, 400);
+    }
+  };
+  reader.readAsArrayBuffer(plyFile);
+}
+
+function drawRealScan(points, total) {
+  // Calcola bounding box
+  var xs = points.map(function(p){return p[0];});
+  var ys = points.map(function(p){return p[1];});
+  var zs = points.map(function(p){return p[2];});
+  var xMin = Math.min.apply(null,xs), xMax = Math.max.apply(null,xs);
+  var yMin = Math.min.apply(null,ys), yMax = Math.max.apply(null,ys);
+  var zMin = Math.min.apply(null,zs), zMax = Math.max.apply(null,zs);
+  // Dimensioni stimate (usa percentile per robustezza)
+  function pctile(arr, p) {
+    var s = arr.slice().sort(function(a,b){return a-b;});
+    return s[Math.floor(s.length*p)];
+  }
+  var W = pctile(xs,0.97) - pctile(xs,0.03);
+  var L = pctile(zs,0.97) - pctile(zs,0.03);  // Scaniverse: Z = profondità
+  var H = pctile(ys,0.97) - pctile(ys,0.03);  // Y = altezza
+  // Se gli assi sono diversi, usa i due più grandi come pianta
+  var dims = [W, Math.abs(L), Math.abs(H)].sort(function(a,b){return b-a;});
+  W = dims[0]; L = dims[1];
+  W = Math.max(1.5, Math.min(W, 15));
+  L = Math.max(1.5, Math.min(L, 15));
+
+  // Aggiorna statistiche
+  document.getElementById('ssp').textContent = total.toLocaleString('it');
+  document.getElementById('ssw').textContent = W.toFixed(2)+'m';
+  document.getElementById('ssl').textContent = L.toFixed(2)+'m';
+  var q = Math.min(95, Math.max(60, Math.floor(60 + (points.length/4000)*35)));
+  var qLbl = q>=85?'Ottima':q>=75?'Buona':'Accettabile';
+  document.getElementById('ssq').textContent = qLbl;
+  var qc = q>=85?'#56d6a4':q>=75?'#5fe3d8':'#f4c560';
+  var fill = document.getElementById('qf');
+  fill.style.background = qc;
+  setTimeout(function(){ fill.style.width = q+'%'; }, 200);
+  document.getElementById('ql').textContent = 'Point cloud reale caricato';
+  document.getElementById('ql').style.color = qc;
+  document.getElementById('qp').textContent = points.length + ' punti';
+
+  // Disegna i punti reali dall'alto (vista pianta X-Z)
+  setTimeout(function() {
+    var wrap = document.getElementById('sw2');
+    var sc = document.getElementById('scv');
+    sc.width = wrap.offsetWidth;
+    sc.height = wrap.offsetHeight;
+    var c = sc.getContext('2d');
+    c.clearRect(0,0,sc.width,sc.height);
+
+    // Proietta i punti su vista dall'alto (X orizzontale, Z verticale)
+    var pad = 40;
+    var rangeX = xMax - xMin || 1;
+    var rangeZ = zMax - zMin || 1;
+    var scale = Math.min((sc.width-pad*2)/rangeX, (sc.height-pad*2)/rangeZ);
+    var offX = (sc.width - rangeX*scale)/2;
+    var offZ = (sc.height - rangeZ*scale)/2;
+
+    // Disegna ogni punto
+    points.forEach(function(p) {
+      var px = offX + (p[0]-xMin)*scale;
+      var pz = offZ + (p[2]-zMin)*scale;
+      // Colore in base all'altezza (Y)
+      var hNorm = (p[1]-yMin)/(yMax-yMin||1);
+      var col;
+      if (hNorm < 0.1 || hNorm > 0.9) col = 'rgba(95,227,216,0.7)';  // pavimento/soffitto
+      else col = 'rgba(95,227,216,0.35)';  // pareti
+      c.fillStyle = col;
+      c.fillRect(px, pz, 1.5, 1.5);
+    });
+
+    // Contorno bounding box
+    c.strokeStyle = 'rgba(139,125,246,0.5)';
+    c.lineWidth = 1.5;
+    c.setLineDash([5,4]);
+    c.strokeRect(offX, offZ, rangeX*scale, rangeZ*scale);
+    c.setLineDash([]);
+
+    // Label dimensioni
+    c.fillStyle = '#5fe3d8';
+    c.font = '600 11px JetBrains Mono,monospace';
+    c.textAlign = 'center';
+    c.fillText(W.toFixed(2)+'m', offX + rangeX*scale/2, offZ - 8);
+    c.save();
+    c.translate(offX - 12, offZ + rangeZ*scale/2);
+    c.rotate(-Math.PI/2);
+    c.fillText(L.toFixed(2)+'m', 0, 0);
+    c.restore();
+  }, 400);
+
+  window._sW = W; window._sL = L;
+}
 
 // ═══ SCAN PREVIEW ═══
 function runScanAnim() {
