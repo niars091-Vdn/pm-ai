@@ -233,6 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.15.1953</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -244,9 +245,12 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     </div>
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
-  <div class="srv" onclick="openCfg()">
-    <div class="dot off" id="sdot"></div>
-    <span id="stxt">server</span>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.15.1953</span>
+    <div class="srv" onclick="openCfg()">
+      <div class="dot off" id="sdot"></div>
+      <span id="stxt">server</span>
+    </div>
   </div>
 </div>
 
@@ -1321,6 +1325,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
+  console.log('%c LayoutSync v2026.06.15.1953 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.15.1953');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
