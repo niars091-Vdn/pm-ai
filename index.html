@@ -1097,6 +1097,17 @@ function showResults(elapsed, anom, larg, lung, nPts) {
   document.getElementById('rvl').textContent = lung&&lung!='--'?(parseFloat(lung).toFixed(2)+'m'):'--';
   document.getElementById('rva').textContent = anom||'0';
   _3W = parseFloat(larg)||3.85; _3L = parseFloat(lung)||4.20;
+  // Mostra fuori squadro se disponibile
+  if (window._realFuoriSquadro) {
+    var fs = window._realFuoriSquadro;
+    var maxFs = 0, peggiore = '';
+    for (var p in fs) { if (fs[p] > maxFs) { maxFs = fs[p]; peggiore = p; } }
+    if (maxFs > 0.5) {
+      setTimeout(function() {
+        toast('Fuori squadro max: parete ' + peggiore + ' ' + maxFs.toFixed(1) + 'deg');
+      }, 1000);
+    }
+  }
   goScreen('sr');
 }
 
@@ -1207,11 +1218,12 @@ function draw3d(){
   ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
   ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
   // Angoli interni ai 4 angoli della stanza
+  var ra = window._realAngoli || {};
   var angoli=[
-    {x:0,  y:-0.15,z:0,  nome:'SW', ang:'89.3'},
-    {x:W,  y:-0.15,z:0,  nome:'SE', ang:'90.0'},
-    {x:W,  y:0,   z:L,  nome:'NE', ang:'90.8'},
-    {x:0,  y:0,   z:L,  nome:'NW', ang:'90.0'},
+    {x:0,  y:-0.15,z:0,  nome:'SW', ang:(ra.SW||90).toFixed(1)},
+    {x:W,  y:-0.15,z:0,  nome:'SE', ang:(ra.SE||90).toFixed(1)},
+    {x:W,  y:0,   z:L,  nome:'NE', ang:(ra.NE||90).toFixed(1)},
+    {x:0,  y:0,   z:L,  nome:'NW', ang:(ra.NW||90).toFixed(1)},
   ];
   // Verde=OK, Giallo=attenzione, Rosso=critico
   angoli.forEach(function(a){
