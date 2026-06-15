@@ -1255,6 +1255,39 @@ function draw3d(){
   pn([[0,0,0],[0,0,L],[0,H,L],[0,H,0]],'#e2e8f0',0.06);
   // Spigoli
   [[0,0,0,W,0,0],[W,0,0,W,0,L],[0,0,L,W,0,L],[0,0,0,0,0,L],[0,H,0,W,H,0],[W,H,0,W,H,L],[0,H,L,W,H,L],[0,H,0,0,H,L],[0,0,0,0,H,0],[W,0,0,W,H,0],[W,0,L,W,H,L],[0,0,L,0,H,L]].forEach(function(s){ln(s[0],s[1],s[2],s[3],s[4],s[5],'#e2e8f0',2);});
+  // ── RENDER PILASTRI, FINESTRE E PORTE REALI (CUCINA DI TEST) ──
+  
+  // Pilastro P1 (Angolo in basso a sinistra: X=0, Z=0)
+  pn([[0,0,0], [0.4,0,0], [0.4,H,0], [0,H,0]], '#94a3b8', 0.15); // Faccia frontale
+  pn([[0.4,0,0], [0.4,0,0.4], [0.4,H,0.4], [0.4,H,0]], '#94a3b8', 0.15); // Faccia laterale
+  pn([[0,0,0.4], [0.4,0,0.4], [0.4,H,0.4], [0,H,0.4]], '#94a3b8', 0.10); // Faccia interna
+  // Linee di spigolo per il Pilastro P1
+  ln(0.4,0,0, 0.4,H,0, '#bcdee2', 1); ln(0.4,0,0.4, 0.4,H,0.4, '#bcdee2', 1); ln(0,0,0.4, 0,H,0.4, '#bcdee2', 1);
+  ln(0,0,0.4, 0.4,0,0.4, '#bcdee2', 1); ln(0,H,0.4, 0.4,H,0.4, '#bcdee2', 1);
+  ln(0.4,0,0, 0.4,0,0.4, '#bcdee2', 1); ln(0.4,H,0, 0.4,H,0.4, '#bcdee2', 1);
+
+  // Pilastro P2 (Lungo la parete Nord: X=2.4 a 2.8, profondità Z=0 a 0.4)
+  pn([[2.4,0,0], [2.8,0,0], [2.8,H,0], [2.4,H,0]], '#94a3b8', 0.15);
+  pn([[2.4,0,0], [2.4,0,0.4], [2.4,H,0.4], [2.4,H,0]], '#94a3b8', 0.15);
+  pn([[2.8,0,0], [2.8,0,0.4], [2.8,H,0.4], [2.8,H,0]], '#94a3b8', 0.15);
+  pn([[2.4,0,0.4], [2.8,0,0.4], [2.8,H,0.4], [2.4,H,0.4]], '#94a3b8', 0.10);
+  // Linee di spigolo per il Pilastro P2
+  ln(2.4,0,0.4, 2.4,H,0.4, '#bcdee2', 1); ln(2.8,0,0.4, 2.8,H,0.4, '#bcdee2', 1);
+  ln(2.4,0,0.4, 2.8,0,0.4, '#bcdee2', 1); ln(2.4,H,0.4, 2.8,H,0.4, '#bcdee2', 1);
+  ln(2.4,0,0, 2.4,0,0.4, '#bcdee2', 1); ln(2.8,0,0, 2.8,0,0.4, '#bcdee2', 1);
+  ln(2.4,H,0, 2.4,H,0.4, '#bcdee2', 1); ln(2.8,H,0, 2.8,H,0.4, '#bcdee2', 1);
+
+  // Finestra 1.5m (Parete SUD: posizionata a Z=L, centrata sulla X)
+  var fx1 = W/2 - 0.75, fx2 = W/2 + 0.75;
+  pn([[fx1, 1.0, L], [fx2, 1.0, L], [fx2, 2.2, L], [fx1, 2.2, L]], '#85c1e9', 0.35); // Vetro azzurrato
+  ln(fx1, 1.0, L, fx2, 1.0, L, '#85c1e9', 3); ln(fx2, 1.0, L, fx2, 2.2, L, '#85c1e9', 3);
+  ln(fx2, 2.2, L, fx1, 2.2, L, '#85c1e9', 3); ln(fx1, 2.2, L, fx1, 1.0, L, '#85c1e9', 3);
+
+  // Porta 0.9m (Parete EST: posizionata a X=W, da Z=1.2 a Z=2.1)
+  pn([[W, 0, 1.2], [W, 0, 2.1], [W, 2.1, 2.1], [W, 2.1, 1.2]], '#F39C12', 0.25); // Pannello porta legno/arancione
+  ln(W, 0, 1.2, W, 2.1, 1.2, '#F39C12', 3); ln(W, 2.1, 1.2, W, 2.1, 2.1, '#F39C12', 3);
+  ln(W, 2.1, 2.1, W, 0, 2.1, '#F39C12', 3);
+  
   // Diagonali pavimento
   ln(0,0.02,0,W,0.02,L,'#a855f7',2,[8,4]);
   ln(W,0.02,0,0,0.02,L,'#f97316',2,[8,4]);
