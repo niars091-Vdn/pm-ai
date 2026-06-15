@@ -877,6 +877,51 @@ function startAnalysis() {
   reader.readAsArrayBuffer(plyFile);
 }
 
+// ═══ ESTRAZIONE CONTORNO REALE (browser) ═══
+function estraiContorno(points) {
+  // Identifica asse altezza
+  var ext = [0,0,0];
+  for (var a=0; a<3; a++) {
+    var vals = points.map(function(p){return p[a];}).sort(function(x,y){return x-y;});
+    ext[a] = vals[Math.floor(vals.length*0.97)] - vals[Math.floor(vals.length*0.03)];
+  }
+  // Altezza = asse 2.0-3.6m o il minore
+  var hAxis = 1, best = 999;
+  for (var i=0; i<3; i++) {
+    if (ext[i]>=2.0 && ext[i]<=3.6 && Math.abs(ext[i]-2.7)<best) { best=Math.abs(ext[i]-2.7); hAxis=i; }
+  }
+  var planAx = [0,1,2].filter(function(i){return i!==hAxis;});
+  var H = ext[hAxis];
+  // Punti pareti (fascia centrale)
+  var ys = points.map(function(p){return p[hAxis];});
+  var yMin = Math.min.apply(null,ys);
+  var wallPts = [];
+  for (var k=0; k<points.length; k++) {
+    var yv = points[k][hAxis] - yMin;
+    if (yv > H*0.15 && yv < H*0.85) {
+      wallPts.push([points[k][planAx[0]], points[k][planAx[1]]]);
+    }
+  }
+  if (wallPts.length < 50) return null;
+  // Bounding box pianta
+  var xs2 = wallPts.map(function(p){return p[0];}).sort(function(a,b){return a-b;});
+  var zs2 = wallPts.map(function(p){return p[1];}).sort(function(a,b){return a-b;});
+  var xmin = xs2[Math.floor(xs2.length*0.01)], xmax = xs2[Math.floor(xs2.length*0.99)];
+  var zmin = zs2[Math.floor(zs2.length*0.01)], zmax = zs2[Math.floor(zs2.length*0.99)];
+  // Occupancy grid
+  var res = 0.08;
+  var nx = Math.max(1, Math.floor((xmax-xmin)/res)+1);
+  var nz = Math.max(1, Math.floor((zmax-zmin)/res)+1);
+  var grid = [];
+  for (var gx=0; gx<nx; gx++) { grid.push(new Int16Array(nz)); }
+  for (var w=0; w<wallPts.length; w++) {
+    var ix = Math.floor((wallPts[w][0]-xmin)/res);
+    var iz = Math.floor((wallPts[w][1]-zmin)/res);
+    if (ix>=0 && ix<nx && iz>=0 && iz<nz) grid[ix][iz]++;
+  }
+  return { grid:grid, nx:nx, nz:nz, res:res, xmin:xmin, zmin:zmin, xmax:xmax, zmax:zmax, W:xmax-xmin, L:zmax-zmin };
+}
+
 function drawRealScan(points, total) {
   // Calcola bounding box
   var xs = points.map(function(p){return p[0];});
@@ -931,37 +976,33 @@ function drawRealScan(points, total) {
     var offX = (sc.width - rangeX*scale)/2;
     var offZ = (sc.height - rangeZ*scale)/2;
 
-    // Disegna ogni punto
+    // Estrai e disegna SAGOMA REALE (occupancy grid)
+    var cont = estraiContorno(points);
+    if (cont) {
+      // Disegna le celle occupate come sagoma piena
+      var cellW = cont.res * scale;
+      for (var gx=0; gx<cont.nx; gx++) {
+        for (var gz=0; gz<cont.nz; gz++) {
+          if (cont.grid[gx][gz] >= 2) {
+            var cellX = offX + (cont.xmin + gx*cont.res - xMin) * scale;
+            var cellZ = offZ + (cont.zmin + gz*cont.res - zMin) * scale;
+            var density = Math.min(1, cont.grid[gx][gz]/8);
+            c.fillStyle = 'rgba(95,227,216,' + (0.3 + density*0.5) + ')';
+            c.fillRect(cellX, cellZ, cellW+0.5, cellW+0.5);
+          }
+        }
+      }
+    }
+
+    // Sovrapponi i punti per dettaglio
     points.forEach(function(p) {
       var px = offX + (p[0]-xMin)*scale;
       var pz = offZ + (p[2]-zMin)*scale;
-      // Colore in base all'altezza (Y)
-      var hNorm = (p[1]-yMin)/(yMax-yMin||1);
-      var col;
-      if (hNorm < 0.1 || hNorm > 0.9) col = 'rgba(95,227,216,0.7)';  // pavimento/soffitto
-      else col = 'rgba(95,227,216,0.35)';  // pareti
-      c.fillStyle = col;
-      c.fillRect(px, pz, 1.5, 1.5);
+      c.fillStyle = 'rgba(139,125,246,0.25)';
+      c.fillRect(px, pz, 1, 1);
     });
 
-    // Contorno bounding box
-    c.strokeStyle = 'rgba(139,125,246,0.5)';
-    c.lineWidth = 1.5;
-    c.setLineDash([5,4]);
-    c.strokeRect(offX, offZ, rangeX*scale, rangeZ*scale);
-    c.setLineDash([]);
-
-    // Label dimensioni
-    c.fillStyle = '#5fe3d8';
-    c.font = '600 11px JetBrains Mono,monospace';
-    c.textAlign = 'center';
-    c.fillText(W.toFixed(2)+'m', offX + rangeX*scale/2, offZ - 8);
-    c.save();
-    c.translate(offX - 12, offZ + rangeZ*scale/2);
-    c.rotate(-Math.PI/2);
-    c.fillText(L.toFixed(2)+'m', 0, 0);
-    c.restore();
-  }, 400);
+    }, 400);
 
   window._sW = W; window._sL = L;
 }
