@@ -1268,9 +1268,27 @@ function draw3d(){
   for(var x=0;x<=W;x+=0.5){var p1=pr3d(x,0,0),p2=pr3d(x,0,L);c.beginPath();c.strokeStyle='#2dd4bf';c.lineWidth=0.5;c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();}
   for(var z2=0;z2<=L;z2+=0.5){var p3=pr3d(0,0,z2),p4=pr3d(W,0,z2);c.beginPath();c.strokeStyle='#2dd4bf';c.lineWidth=0.5;c.moveTo(p3[0],p3[1]);c.lineTo(p4[0],p4[1]);c.stroke();}
   c.globalAlpha=1;
-  // Pannelli pareti
+  
+  // Funzioni di disegno
   function pn(pts,col,alpha){var pr=pts.map(function(p){return pr3d(p[0],p[1],p[2]);});c.beginPath();c.moveTo(pr[0][0],pr[0][1]);pr.slice(1).forEach(function(p){c.lineTo(p[0],p[1]);});c.closePath();c.fillStyle=col+Math.round((alpha||0.07)*255).toString(16).padStart(2,'0');c.fill();}
   function ln(x1,y1,z1,x2,y2,z2,col,lw,dash){var p1=pr3d(x1,y1,z1),p2=pr3d(x2,y2,z2);c.beginPath();c.strokeStyle=col;c.lineWidth=lw||2;c.setLineDash(dash||[]);c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();c.setLineDash([]);}
+  
+  // ── NUOVA FUNZIONE: ETICHETTE MULTI-RIGA ──
+  function lbl(x, y, z, lines, col, offY) {
+    var p = pr3d(x, y, z);
+    c.font='600 9px JetBrains Mono,monospace';
+    c.textAlign='center'; c.textBaseline='middle';
+    var tw = Math.max(...lines.map(l => c.measureText(l).width)) + 10;
+    var th = lines.length * 12 + 4;
+    var oy = offY || 0;
+    c.fillStyle='rgba(10,14,26,0.85)';
+    c.fillRect(p[0]-tw/2, p[1]-th/2 + oy, tw, th);
+    c.fillStyle=col;
+    lines.forEach((line, i) => {
+        c.fillText(line, p[0], p[1] - th/2 + 8 + (i*12) + oy);
+    });
+  }
+
   pn([[0,0,0],[W,0,0],[W,H,0],[0,H,0]],'#e2e8f0',0.06);
   pn([[0,0,L],[W,0,L],[W,H,L],[0,H,L]],'#e2e8f0',0.06);
   pn([[W,0,0],[W,0,L],[W,H,L],[W,H,0]],'#e2e8f0',0.06);
@@ -1278,12 +1296,12 @@ function draw3d(){
   // Spigoli
   [[0,0,0,W,0,0],[W,0,0,W,0,L],[0,0,L,W,0,L],[0,0,0,0,0,L],[0,H,0,W,H,0],[W,H,0,W,H,L],[0,H,L,W,H,L],[0,H,0,0,H,L],[0,0,0,0,H,0],[W,0,0,W,H,0],[W,0,L,W,H,L],[0,0,L,0,H,L]].forEach(function(s){ln(s[0],s[1],s[2],s[3],s[4],s[5],'#e2e8f0',2);});
 
-  // ── RENDER DINAMICO ELEMENTI (DA AI PYTHON) ──
+  // ── RENDER DINAMICO ELEMENTI CON MISURE ──
   if (window._elementiReali) {
     Object.entries(window._elementiReali).forEach(function(entry) {
       var parete = entry[0];
       var els = entry[1];
-      if (!els) return; // Se non ci sono elementi, salta
+      if (!els) return;
 
       els.forEach(function(el) {
         var p_w = el.larghezza;
@@ -1297,10 +1315,11 @@ function draw3d(){
         if (el.tipo === 'finestra') { h0 = 0.9; h1 = 2.1; }
         if (el.tipo === 'porta')    { h0 = 0.0; h1 = 2.1; }
 
-        if (parete === 'SUD') { p1 = [o, h0, L]; p2 = [o+p_w, h0, L]; p3 = [o+p_w, h1, L]; p4 = [o, h1, L]; }
-        else if (parete === 'NORD') { p1 = [o, h0, 0]; p2 = [o+p_w, h0, 0]; p3 = [o+p_w, h1, 0]; p4 = [o, h1, 0]; }
-        else if (parete === 'EST') { p1 = [W, h0, o]; p2 = [W, h0, o+p_w]; p3 = [W, h1, o+p_w]; p4 = [W, h1, o]; }
-        else if (parete === 'OVEST') { p1 = [0, h0, o]; p2 = [0, h0, o+p_w]; p3 = [0, h1, o+p_w]; p4 = [0, h1, o]; }
+        var cx = 0, cz = 0; // Centro dell'elemento per l'etichetta
+        if (parete === 'SUD') { p1 = [o, h0, L]; p2 = [o+p_w, h0, L]; p3 = [o+p_w, h1, L]; p4 = [o, h1, L]; cx = o + p_w/2; cz = L; }
+        else if (parete === 'NORD') { p1 = [o, h0, 0]; p2 = [o+p_w, h0, 0]; p3 = [o+p_w, h1, 0]; p4 = [o, h1, 0]; cx = o + p_w/2; cz = 0; }
+        else if (parete === 'EST') { p1 = [W, h0, o]; p2 = [W, h0, o+p_w]; p3 = [W, h1, o+p_w]; p4 = [W, h1, o]; cx = W; cz = o + p_w/2; }
+        else if (parete === 'OVEST') { p1 = [0, h0, o]; p2 = [0, h0, o+p_w]; p3 = [0, h1, o+p_w]; p4 = [0, h1, o]; cx = 0; cz = o + p_w/2; }
 
         pn([p1, p2, p3, p4], col, alpha);
         ln(p1[0],p1[1],p1[2], p2[0],p2[1],p2[2], col, 2);
@@ -1326,6 +1345,9 @@ function draw3d(){
             ln(p3[0],p3[1],p3[2], p7[0],p7[1],p7[2], col, 1.5);
             ln(p4[0],p4[1],p4[2], p8[0],p8[1],p8[2], col, 1.5);
         }
+
+        // DISEGNA ETICHETTA DELL'ELEMENTO (Nome + Misura)
+        lbl(cx, (h0+h1)/2, cz, [el.tipo.toUpperCase(), p_w.toFixed(2) + 'm'], col);
       });
     });
   }
@@ -1333,11 +1355,17 @@ function draw3d(){
   // Diagonali pavimento
   ln(0,0.02,0,W,0.02,L,'#a855f7',2,[8,4]);
   ln(W,0.02,0,0,0.02,L,'#f97316',2,[8,4]);
-  // Quote
+  
+  // Quote Globali Muri
   ln(0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
   ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
   ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
-  // Angoli interni ai 4 angoli della stanza
+  
+  lbl(W/2, 0, -0.45, [W.toFixed(2)+'m'], '#ef4444');
+  lbl(W+0.45, 0, L/2, [L.toFixed(2)+'m'], '#ef4444');
+  lbl(-0.5, H/2, 0, [H.toFixed(2)+'m'], '#94a3b8');
+
+  // ── ANGOLI INTERNI E FUORI SQUADRO ──
   var ra = window._realAngoli || {};
   var angoli=[
     {x:0,  y:-0.15,z:0,  nome:'SW', ang:(ra.SW||90).toFixed(1)},
@@ -1345,25 +1373,21 @@ function draw3d(){
     {x:W,  y:0,   z:L,  nome:'NE', ang:(ra.NE||90).toFixed(1)},
     {x:0,  y:0,   z:L,  nome:'NW', ang:(ra.NW||90).toFixed(1)},
   ];
-  // Verde=OK, Giallo=attenzione, Rosso=critico
+  
   angoli.forEach(function(a){
-    var p=pr3d(a.x,a.y,a.z);
-    var scarto=Math.abs(parseFloat(a.ang)-90);
-    var col=scarto<0.5?'#10b981':scarto<1.5?'#f59e0b':'#ef4444';
+    var p = pr3d(a.x, a.y, a.z);
+    var scarto = Math.abs(parseFloat(a.ang)-90);
+    var col = scarto < 0.5 ? '#10b981' : (scarto < 1.5 ? '#f59e0b' : '#ef4444');
+    
     // Cerchio angolo
     c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
     c.arc(p[0],p[1],10,0,Math.PI*2);c.stroke();
-    // Testo gradi
-    c.fillStyle='rgba(10,14,26,0.85)';
-    c.font='500 9px JetBrains Mono,monospace';
-    c.textAlign='center';c.textBaseline='middle';
-    var tw=c.measureText(a.ang+'deg').width+6;
-    var offY=-20;
-    c.fillRect(p[0]-tw/2,p[1]+offY-8,tw,16);
-    c.fillStyle=col;
-    c.fillText(a.ang+'deg',p[0],p[1]+offY);
-    c.textBaseline='alphabetic';
+    
+    // Etichetta con i gradi e il fuori squadro
+    var testoScarto = scarto > 0 ? 'Δ ' + scarto.toFixed(1) + '°' : 'OK';
+    lbl(a.x, a.y, a.z, [a.ang + '°', testoScarto], col, -24);
   });
+}
 
   // Label quote
   [[W/2,0,-0.45,W.toFixed(2)+'m','#ef4444'],[W+0.45,0,L/2,L.toFixed(2)+'m','#ef4444'],[-0.5,H/2,0,H.toFixed(2)+'m','#94a3b8']].forEach(function(lb){
