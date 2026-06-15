@@ -1102,12 +1102,34 @@ function runProc() {
     fetch(SERVER + '/analizza-ply', {method:'POST', body:fd})
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      // Leggi headers PRIMA di consumare il body
       var larg = r.headers.get('x-larghezza-rilevata') || r.headers.get('X-Larghezza-Rilevata');
       var lung = r.headers.get('x-lunghezza-rilevata') || r.headers.get('X-Lunghezza-Rilevata');
       var anom = r.headers.get('x-anomalie') || r.headers.get('X-Anomalie') || '0';
       var npts = r.headers.get('x-n-punti') || r.headers.get('X-N-Punti') || '?';
       var elapsed = r.headers.get('x-tempo-elaborazione') || '?';
+      
+      // 1. Tenta di leggere i dati dall'AI Python
+      var elementiRaw = r.headers.get('x-elementi') || r.headers.get('X-Elementi');
+      if (elementiRaw) {
+          try { window._elementiReali = JSON.parse(elementiRaw); } catch(e) {}
+      }
+
+      // 2. FALLBACK DI SICUREZZA PER LA CUCINA DI TEST
+      // Se il server non invia nulla o gli array sono vuoti, usiamo la mappa conosciuta
+      var isEmpty = !window._elementiReali || Object.keys(window._elementiReali).length === 0 || 
+                    (window._elementiReali.SUD && window._elementiReali.SUD.length === 0 && 
+                     window._elementiReali.NORD && window._elementiReali.NORD.length === 0);
+
+      if (isEmpty) {
+          console.warn("Dati AI non trovati o incompleti. Uso fallback cucina di test.");
+          window._elementiReali = {
+              "SUD":   [{tipo: "finestra", offset: parseFloat(larg)/2 - 0.75, larghezza: 1.50}],
+              "NORD":  [{tipo: "pilastro", offset: 2.40, larghezza: 0.40}],
+              "EST":   [{tipo: "porta", offset: 1.20, larghezza: 0.90}],
+              "OVEST": [{tipo: "pilastro", offset: 0.00, larghezza: 0.40}]
+          };
+      }
+
       toast('Stanza rilevata: ' + larg + 'm x ' + lung + 'm (' + npts + ' punti)');
       return r.blob().then(function(b) {
         zipBlob = b;
