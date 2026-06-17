@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2042</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2102</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2042</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2102</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1290,6 +1290,7 @@ function nuovoRilievo() {
 
 // ═══ VISTA 3D ═══
 function go3d() {
+  setTimeout(function(){ toast('Tocca pilastri, porte o angoli per i dettagli'); }, 600);
   document.getElementById('i3w').textContent = _3W.toFixed(2)+'m';
   document.getElementById('i3l').textContent = _3L.toFixed(2)+'m';
   document.getElementById('i3h').textContent = _3H.toFixed(2)+'m';
@@ -1551,24 +1552,74 @@ function openDetail(zone) {
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
     html += '<div style="width:40px;height:40px;border-radius:10px;background:'+col+'33;border:1px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:20px;">'+(d.tipo==='pilastro'?'\u2b1b':(d.tipo==='finestra'?'\ud83e\ude9f':'\ud83d\udeaa'))+'</div>';
     html += '<div><div style="font-size:18px;font-weight:700;">'+nome+'</div><div style="font-size:12px;color:var(--t2);">Parete '+d.parete+'</div></div></div>';
+    // Calcola distanze dai due angoli della parete
+    var lungParete = (d.parete==='NORD'||d.parete==='SUD') ? W : L;
+    var distSx = d.offset;                              // dall'angolo "iniziale"
+    var distDx = lungParete - d.offset - d.larghezza;   // dall'angolo "finale"
+    // Nomi angoli per parete
+    var angoliParete = {
+      'NORD': ['angolo OVEST','angolo EST'],
+      'SUD':  ['angolo OVEST','angolo EST'],
+      'EST':  ['angolo NORD','angolo SUD'],
+      'OVEST':['angolo NORD','angolo SUD']
+    };
+    var nomiAng = angoliParete[d.parete] || ['sx','dx'];
+
+    // SEZIONE POSIZIONAMENTO (la piu importante per l'installatore)
+    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Posizionamento sulla parete</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+    html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
+    html += detCard('Da '+nomiAng[0], (distSx*100).toFixed(0)+' cm', '#5fe3d8');
+    html += detCard('Da '+nomiAng[1], (distDx*100).toFixed(0)+' cm', '#5fe3d8');
+    html += detCard('Lunghezza parete', (lungParete*100).toFixed(0)+' cm', col);
+    html += '</div>';
+
+    // SEZIONE DIMENSIONI VERTICALI
+    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Dimensioni</div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    html += detCard('Larghezza', d.larghezza.toFixed(2)+'m', col);
-    html += detCard('Altezza', altezza+'m', col);
-    html += detCard('Diagonale', diag+'m', '#8b7df6');
-    html += detCard('Distanza angolo', d.offset.toFixed(2)+'m', col);
+    html += detCard('Altezza', (parseFloat(altezza)*100).toFixed(0)+' cm', col);
+    html += detCard('Diagonale', diag+' m', '#8b7df6');
     if (d.tipo === 'finestra') {
-      html += detCard('Davanzale', d.h0.toFixed(2)+'m', col);
-      html += detCard('Architrave', d.h1.toFixed(2)+'m', col);
+      html += detCard('Davanzale da terra', (d.h0*100).toFixed(0)+' cm', col);
+      html += detCard('Architrave da terra', (d.h1*100).toFixed(0)+' cm', col);
     }
     if (d.tipo === 'porta') {
-      html += detCard('Luce porta', altezza+'m', col);
-      html += detCard('Passaggio', d.larghezza.toFixed(2)+'m', col);
+      html += detCard('Luce passaggio', (d.larghezza*100).toFixed(0)+' cm', col);
+      html += detCard('Altezza luce', (parseFloat(altezza)*100).toFixed(0)+' cm', col);
     }
     if (d.tipo === 'pilastro') {
-      html += detCard('Sporgenza', '0.30m', col);
-      html += detCard('Area occupata', (d.larghezza*0.30).toFixed(2)+'m\u00b2', col);
+      html += detCard('Sporgenza', '30 cm', col);
+      html += detCard('Ingombro pianta', (d.larghezza*0.30).toFixed(2)+' m\u00b2', col);
     }
     html += '</div>';
+
+    // SCHEMA QUOTE VISIVO (mini disegno tecnico)
+    var svgW = 280, svgH = 90, mL = 30, mR = 30;
+    var wallPx = svgW - mL - mR;
+    var elemPxW = Math.max(20, (d.larghezza/lungParete)*wallPx);
+    var elemPxX = mL + (distSx/lungParete)*wallPx;
+    html += '<div style="margin-top:14px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;">';
+    html += '<svg width="100%" viewBox="0 0 '+svgW+' '+svgH+'" style="display:block;">';
+    // Linea parete
+    html += '<line x1="'+mL+'" y1="45" x2="'+(svgW-mR)+'" y2="45" stroke="#e2e8f0" stroke-width="3"/>';
+    // Elemento
+    html += '<rect x="'+elemPxX+'" y="38" width="'+elemPxW+'" height="14" fill="'+col+'" opacity="0.6" stroke="'+col+'" stroke-width="1.5"/>';
+    // Quota sinistra
+    html += '<line x1="'+mL+'" y1="62" x2="'+elemPxX+'" y2="62" stroke="#5fe3d8" stroke-width="1"/>';
+    html += '<text x="'+(mL+(elemPxX-mL)/2)+'" y="75" fill="#5fe3d8" font-size="9" text-anchor="middle" font-family="monospace">'+(distSx*100).toFixed(0)+'</text>';
+    // Quota elemento
+    html += '<line x1="'+elemPxX+'" y1="28" x2="'+(elemPxX+elemPxW)+'" y2="28" stroke="'+col+'" stroke-width="1"/>';
+    html += '<text x="'+(elemPxX+elemPxW/2)+'" y="22" fill="'+col+'" font-size="9" text-anchor="middle" font-family="monospace">'+(d.larghezza*100).toFixed(0)+'</text>';
+    // Quota destra
+    html += '<line x1="'+(elemPxX+elemPxW)+'" y1="62" x2="'+(svgW-mR)+'" y2="62" stroke="#5fe3d8" stroke-width="1"/>';
+    html += '<text x="'+((elemPxX+elemPxW)+(svgW-mR-elemPxX-elemPxW)/2)+'" y="75" fill="#5fe3d8" font-size="9" text-anchor="middle" font-family="monospace">'+(distDx*100).toFixed(0)+'</text>';
+    // Etichette angoli
+    html += '<text x="'+mL+'" y="38" fill="#94a3b8" font-size="8" text-anchor="middle">'+nomiAng[0].replace("angolo ","")+'</text>';
+    html += '<text x="'+(svgW-mR)+'" y="38" fill="#94a3b8" font-size="8" text-anchor="middle">'+nomiAng[1].replace("angolo ","")+'</text>';
+    html += '</svg>';
+    html += '<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:2px;">quote in cm</div>';
+    html += '</div>';
+
     // Fuori squadro della parete dell'elemento
     var fs = window._realFuoriSquadro || {};
     if (fs[d.parete] !== undefined) {
@@ -1647,8 +1698,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.17.2042 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.17.2042');
+  console.log('%c LayoutSync v2026.06.17.2102 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.2102');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
