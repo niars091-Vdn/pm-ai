@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2011</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2042</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2011</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2042</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1235,6 +1235,14 @@ function showResults(elapsed, anom, larg, lung, nPts) {
       var nome = ordine[oi];
       if (fs[nome] === undefined) continue;
       var v = fs[nome];
+      // Protezione: valori oltre 8 gradi sono fisicamente impossibili per una parete
+      if (v > 8) {
+        var html_fs2 = '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--card);border:1px solid var(--brd);border-left:3px solid var(--t3);border-radius:8px;margin-bottom:7px;">';
+        html_fs2 += '<div><div style="font-size:13px;font-weight:600;color:var(--txt);">Parete '+nome+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px;">Dato non affidabile - rifare scansione parete</div></div>';
+        html_fs2 += '<div style="font-family:var(--mono);font-size:15px;color:var(--t3);">--</div></div>';
+        html_fs += html_fs2;
+        continue;
+      }
       var col = v<0.5?'#56d6a4':v<1.5?'#f4c560':'#ef5d6b';
       var stato = v<0.5?'A squadro':v<1.5?'Lieve deviazione':'Fuori squadro';
       var mm = (Math.tan(v*Math.PI/180)*2.7*1000).toFixed(0);
@@ -1639,8 +1647,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.17.2011 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.17.2011');
+  console.log('%c LayoutSync v2026.06.17.2042 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.2042');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
