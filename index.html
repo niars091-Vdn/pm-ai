@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2112</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2122</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2112</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2122</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -416,6 +416,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
       <button class="v3btn" onclick="setV3('top',this)">Pianta</button>
       <button class="v3btn" onclick="setV3('nord',this)">Nord</button>
       <button class="v3btn" onclick="setV3('est',this)">Est</button>
+      <button class="v3btn" id="projBtn" onclick="toggleProj(this)" style="margin-left:4px;">Prosp.</button>
     </div>
   </div>
   <canvas id="c3" style="flex:1;width:100%;display:block;touch-action:none;min-height:0;"></canvas>
@@ -465,6 +466,7 @@ var WALLS4 = ['NORD','SUD','EST','OVEST'];
 var cv, ctx2d;
 var _rx=0.42, _ry=0.55, _zoom=1.0, _d3=false, _lx3=0, _ly3=0, _p3=0;
 var _3W=3.85, _3L=4.20, _3H=2.70;
+var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
 
 // ═══ NAVIGAZIONE ═══
 var SCREENS = ['sw','sd','sc','si','sp','spr','sr','s3'];
@@ -1176,8 +1178,8 @@ function runProc() {
       if (!window._elementiReali || Object.keys(window._elementiReali).length === 0) {
         var wNum = parseFloat(larg) || 5.0;
         window._elementiReali = {
-          'NORD':  [{tipo:'pilastro', offset:2.30, larghezza:0.40}],
-          'OVEST': [{tipo:'pilastro', offset:0.00, larghezza:0.35}],
+          'NORD':  [{tipo:'pilastro', offset:2.30, larghezza:0.40, profondita:0.30, angoli:[90.2,89.8,90.5,89.5]}],
+          'OVEST': [{tipo:'pilastro', offset:0.00, larghezza:0.35, profondita:0.35, angoli:[90,91.2,88.9,90.1]}],
           'SUD':   [{tipo:'finestra', offset:1.50, larghezza:1.50}],
           'EST':   [{tipo:'porta', offset:1.00, larghezza:0.90}]
         };
@@ -1360,12 +1362,25 @@ function setV3(v, btn) {
   draw3d();
 }
 
+function toggleProj(btn) {
+  _proj = (_proj === 'prosp') ? 'asso' : 'prosp';
+  btn.textContent = (_proj === 'prosp') ? 'Prosp.' : 'Asso.';
+  btn.classList.toggle('on', _proj === 'asso');
+  toast(_proj === 'prosp' ? 'Vista prospettica' : 'Vista assonometrica');
+  draw3d();
+}
+
 function pr3d(x,y,z){
   var W=_3W,L=_3L,H=_3H;
   var tx=x-W/2,ty=y-H/2,tz=z-L/2;
   var rx=tx*Math.cos(_ry)-tz*Math.sin(_ry),rz=tx*Math.sin(_ry)+tz*Math.cos(_ry);
   var ry2=ty*Math.cos(_rx)-rz*Math.sin(_rx),rz2=ty*Math.sin(_rx)+rz*Math.cos(_rx);
-  var fov=440,dd=fov/(fov+rz2+8);
+  var dd;
+  if (_proj === 'asso') {
+    dd = 1.0;  // assonometrica: nessuna deformazione prospettica (linee parallele restano parallele)
+  } else {
+    var fov=440; dd=fov/(fov+rz2+8);  // prospettica: oggetti lontani piu piccoli
+  }
   var css=window._c3css||{w:document.getElementById('c3').width,h:document.getElementById('c3').height};
   // _zoom moltiplica la scala finale -> zoom diretto ed evidente
   var s=52*_zoom;
@@ -1543,65 +1558,68 @@ function handle3dTap(clientX, clientY) {
 
 // ═══ SCHEMI 3D ISOMETRICI QUOTATI ═══
 function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
-  // Proiezione isometrica semplice
-  var sw=300, sh=230;
-  var ox=sw*0.5, oy=sh*0.52;  // origine
-  var sc=1; // scala disegnata
-  // Vettori isometrici (30 gradi)
-  var ax=Math.cos(Math.PI/6), ay=Math.sin(Math.PI/6);
+  // Proiezione isometrica compatta
+  var sw=280, sh=170;
+  var ox=sw*0.46, oy=sh*0.50;
+  var SK=30; // scala ridotta (era 40)
   function iso(x, y, z) {
-    // x=larghezza parete, y=altezza, z=profondita
-    return [ox + (x-z)*ax*40, oy - y*40 + (x+z)*ay*40*0.6];
+    var ax=Math.cos(Math.PI/6), ay=Math.sin(Math.PI/6);
+    return [ox + (x-z)*ax*SK, oy - y*SK + (x+z)*ay*SK*0.6];
   }
-  var lw = Math.min(lungParete, 4); // limita per visualizzazione
-  var hh = (d.h1-d.h0);
+  var lw = Math.min(lungParete, 4);
   var ew = d.larghezza;
-  var eo = (d.offset/lungParete)*lw; // offset scalato
+  var eo = (d.offset/lungParete)*lw;
   var ewS = (ew/lungParete)*lw;
 
-  var svg = '<svg width="100%" viewBox="0 0 '+sw+' '+sh+'" style="display:block;">';
+  var svg = '<svg width="100%" viewBox="0 0 '+sw+' '+sh+'" style="display:block;max-height:170px;">';
 
-  // Pavimento (griglia)
+  // Pavimento
   var f1=iso(0,0,0), f2=iso(lw,0,0), f3=iso(lw,0,1), f4=iso(0,0,1);
   svg += '<polygon points="'+f1[0]+','+f1[1]+' '+f2[0]+','+f2[1]+' '+f3[0]+','+f3[1]+' '+f4[0]+','+f4[1]+'" fill="#1a2535" stroke="#2a3a52" stroke-width="1"/>';
-
-  // Parete di fondo
+  // Parete
   var w1=iso(0,0,0), w2=iso(lw,0,0), w3=iso(lw,2.7,0), w4=iso(0,2.7,0);
   svg += '<polygon points="'+w1[0]+','+w1[1]+' '+w2[0]+','+w2[1]+' '+w3[0]+','+w3[1]+' '+w4[0]+','+w4[1]+'" fill="#172131" stroke="#39507a" stroke-width="1.5"/>';
 
   if (d.tipo === 'pilastro') {
-    // Pilastro come volume 3D che sporge
-    var pr=0.5; // profondita disegnata
+    var pr = d.profondita ? (d.profondita) : 0.30; // profondita reale o default
+    var prS = pr; // gia in metri, scala con iso
     var p_base = eo;
-    var b1=iso(p_base,0,0), b2=iso(p_base+ewS,0,0), b3=iso(p_base+ewS,0,pr), b4=iso(p_base,0,pr);
-    var t1=iso(p_base,2.7,0), t2=iso(p_base+ewS,2.7,0), t3=iso(p_base+ewS,2.7,pr), t4=iso(p_base,2.7,pr);
-    // Facce
+    var b1=iso(p_base,0,0), b2=iso(p_base+ewS,0,0), b3=iso(p_base+ewS,0,prS), b4=iso(p_base,0,prS);
+    var t1=iso(p_base,2.7,0), t2=iso(p_base+ewS,2.7,0), t3=iso(p_base+ewS,2.7,prS), t4=iso(p_base,2.7,prS);
     svg += '<polygon points="'+b4[0]+','+b4[1]+' '+b3[0]+','+b3[1]+' '+t3[0]+','+t3[1]+' '+t4[0]+','+t4[1]+'" fill="'+col+'" opacity="0.5" stroke="'+col+'" stroke-width="1.5"/>';
     svg += '<polygon points="'+b2[0]+','+b2[1]+' '+b3[0]+','+b3[1]+' '+t3[0]+','+t3[1]+' '+t2[0]+','+t2[1]+'" fill="'+col+'" opacity="0.7" stroke="'+col+'" stroke-width="1.5"/>';
     svg += '<polygon points="'+t1[0]+','+t1[1]+' '+t2[0]+','+t2[1]+' '+t3[0]+','+t3[1]+' '+t4[0]+','+t4[1]+'" fill="'+col+'" opacity="0.9" stroke="'+col+'" stroke-width="1.5"/>';
-    // Quote
-    svg += quota(b1, b2, (ew*100).toFixed(0), col, 18);
-    svg += quota(b2, b3, '30', col, 14);
+    // Quote larghezza e profondita
+    svg += quota(b1, b2, (ew*100).toFixed(0), col, 14);
+    svg += quota(b2, b3, (pr*100).toFixed(0), '#f4c560', 10);
+    // Marca i 4 angoli del pilastro (spigoli verticali frontali) con pallini
+    var spigoli = [b1, b2, b3, b4];
+    var angoliP = d.angoli || [90,90,90,90];
+    for (var ai=0; ai<4; ai++) {
+      var sp = spigoli[ai];
+      var sc = Math.abs((angoliP[ai]||90)-90);
+      var scol = sc<0.5?'#56d6a4':sc<1.5?'#f4c560':'#ef5d6b';
+      svg += '<circle cx="'+sp[0]+'" cy="'+sp[1]+'" r="3" fill="'+scol+'"/>';
+    }
   } else {
-    // Porta/finestra come apertura sulla parete
     var a_base = eo;
-    var ha = (d.h0/2.7)*2.7;
     var o1=iso(a_base, d.h0, 0), o2=iso(a_base+ewS, d.h0, 0), o3=iso(a_base+ewS, d.h1, 0), o4=iso(a_base, d.h1, 0);
     svg += '<polygon points="'+o1[0]+','+o1[1]+' '+o2[0]+','+o2[1]+' '+o3[0]+','+o3[1]+' '+o4[0]+','+o4[1]+'" fill="'+col+'" opacity="0.55" stroke="'+col+'" stroke-width="2"/>';
-    // Quote: larghezza (sotto) e altezza (lato)
-    svg += quota(o1, o2, (ew*100).toFixed(0), col, 16);
-    svg += quota(o2, o3, ((d.h1-d.h0)*100).toFixed(0), col, 16);
+    // Diagonali dell'apertura (per verifica squadro)
+    svg += '<line x1="'+o1[0]+'" y1="'+o1[1]+'" x2="'+o3[0]+'" y2="'+o3[1]+'" stroke="#8b7df6" stroke-width="1" stroke-dasharray="3,2"/>';
+    svg += '<line x1="'+o2[0]+'" y1="'+o2[1]+'" x2="'+o4[0]+'" y2="'+o4[1]+'" stroke="#8b7df6" stroke-width="1" stroke-dasharray="3,2"/>';
+    svg += quota(o1, o2, (ew*100).toFixed(0), col, 14);
+    svg += quota(o2, o3, ((d.h1-d.h0)*100).toFixed(0), col, 14);
     if (d.tipo === 'finestra') {
-      // Quota davanzale
       var dav1=iso(a_base,0,0), dav2=iso(a_base,d.h0,0);
-      svg += quota(dav1, dav2, (d.h0*100).toFixed(0), '#85c1e9', -16);
+      svg += quota(dav1, dav2, (d.h0*100).toFixed(0), '#85c1e9', -14);
     }
   }
 
-  // Quote distanze dagli angoli (sul pavimento) - separate verticalmente
+  // Distanze dagli angoli
   var g0=iso(0,0,0), gE=iso(eo,0,0), gEnd=iso(lw,0,0), gElEnd=iso(eo+ewS,0,0);
-  svg += quota(g0, gE, (distSx*100).toFixed(0), '#5fe3d8', 38);
-  svg += quota(gElEnd, gEnd, (distDx*100).toFixed(0), '#5fe3d8', 38);
+  svg += quota(g0, gE, (distSx*100).toFixed(0), '#5fe3d8', 30);
+  svg += quota(gElEnd, gEnd, (distDx*100).toFixed(0), '#5fe3d8', 30);
 
   svg += '</svg>';
   return svg;
@@ -1631,51 +1649,76 @@ function openDetail(zone) {
     html += '<div><div style="font-size:18px;font-weight:700;">'+nome+'</div><div style="font-size:12px;color:var(--t2);">Parete '+d.parete+'</div></div></div>';
     // Calcola distanze dai due angoli della parete
     var lungParete = (d.parete==='NORD'||d.parete==='SUD') ? W : L;
-    var distSx = d.offset;                              // dall'angolo "iniziale"
-    var distDx = lungParete - d.offset - d.larghezza;   // dall'angolo "finale"
-    // Nomi angoli per parete
+    var distSx = d.offset;
+    var distDx = lungParete - d.offset - d.larghezza;
     var angoliParete = {
-      'NORD': ['angolo OVEST','angolo EST'],
-      'SUD':  ['angolo OVEST','angolo EST'],
-      'EST':  ['angolo NORD','angolo SUD'],
-      'OVEST':['angolo NORD','angolo SUD']
+      'NORD': ['OVEST','EST'], 'SUD': ['OVEST','EST'],
+      'EST': ['NORD','SUD'], 'OVEST': ['NORD','SUD']
     };
-    var nomiAng = angoliParete[d.parete] || ['sx','dx'];
+    var nomiAng = angoliParete[d.parete] || ['SX','DX'];
+    var altezzaEl = (d.h1 - d.h0);
 
-    // SEZIONE POSIZIONAMENTO (la piu importante per l'installatore)
-    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Posizionamento sulla parete</div>';
+    // Profondita pilastro (reale o default)
+    var profPil = d.profondita || 0.30;
+    // Angoli del pilastro (reali o default 90)
+    var angPil = d.angoli || [90,90,90,90];
+
+    // ═══ 1. SCHEMA 3D (prima informazione, compatto) ═══
+    html += '<div style="margin-bottom:16px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;">';
+    html += schema3dElemento(d, W, L, col, distSx, distDx, lungParete);
+    html += '<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:2px;">misure in cm</div>';
+    html += '</div>';
+
+    // ═══ 2. POSIZIONAMENTO ═══
+    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Posizionamento</div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
     html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
-    html += detCard('Da '+nomiAng[0], (distSx*100).toFixed(0)+' cm', '#5fe3d8');
-    html += detCard('Da '+nomiAng[1], (distDx*100).toFixed(0)+' cm', '#5fe3d8');
+    html += detCard('Da angolo '+nomiAng[0], (distSx*100).toFixed(0)+' cm', '#5fe3d8');
+    html += detCard('Da angolo '+nomiAng[1], (distDx*100).toFixed(0)+' cm', '#5fe3d8');
     html += detCard('Lunghezza parete', (lungParete*100).toFixed(0)+' cm', col);
     html += '</div>';
 
-    // SEZIONE DIMENSIONI VERTICALI
+    // ═══ 3. DIMENSIONI ═══
     html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Dimensioni</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    html += detCard('Altezza', (parseFloat(altezza)*100).toFixed(0)+' cm', col);
-    html += detCard('Diagonale', diag+' m', '#8b7df6');
-    if (d.tipo === 'finestra') {
-      html += detCard('Davanzale da terra', (d.h0*100).toFixed(0)+' cm', col);
-      html += detCard('Architrave da terra', (d.h1*100).toFixed(0)+' cm', col);
-    }
-    if (d.tipo === 'porta') {
-      html += detCard('Luce passaggio', (d.larghezza*100).toFixed(0)+' cm', col);
-      html += detCard('Altezza luce', (parseFloat(altezza)*100).toFixed(0)+' cm', col);
-    }
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
     if (d.tipo === 'pilastro') {
-      html += detCard('Sporgenza', '30 cm', col);
-      html += detCard('Ingombro pianta', (d.larghezza*0.30).toFixed(2)+' m\u00b2', col);
+      html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
+      html += detCard('Profondita', (profPil*100).toFixed(0)+' cm', '#f4c560');
+      html += detCard('Altezza', '270 cm', col);
+      html += detCard('Ingombro pianta', (d.larghezza*profPil).toFixed(2)+' m\u00b2', col);
+      // Diagonali del pilastro (in pianta)
+      var diagPil = Math.hypot(d.larghezza, profPil);
+      html += detCard('Diagonale pianta', (diagPil*100).toFixed(0)+' cm', '#8b7df6');
+      html += detCard('Perimetro', ((d.larghezza+profPil)*2*100).toFixed(0)+' cm', col);
+    } else {
+      html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
+      html += detCard('Altezza', (altezzaEl*100).toFixed(0)+' cm', col);
+      var diagAp = Math.hypot(d.larghezza, altezzaEl);
+      html += detCard('Diagonale', (diagAp*100).toFixed(0)+' cm', '#8b7df6');
+      if (d.tipo === 'finestra') {
+        html += detCard('Davanzale', (d.h0*100).toFixed(0)+' cm', col);
+        html += detCard('Architrave', (d.h1*100).toFixed(0)+' cm', col);
+      }
+      if (d.tipo === 'porta') {
+        html += detCard('Luce passaggio', (d.larghezza*100).toFixed(0)+' cm', col);
+        html += detCard('Altezza luce', (altezzaEl*100).toFixed(0)+' cm', col);
+      }
     }
     html += '</div>';
 
-    // SCHEMA 3D ISOMETRICO QUOTATO
-    html += '<div style="margin-top:14px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:12px;">';
-    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Schema quotato</div>';
-    html += schema3dElemento(d, W, L, col, distSx, distDx, lungParete);
-    html += '<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:4px;">misure in cm</div>';
-    html += '</div>';
+    // ═══ 4. FUORI SQUADRO ANGOLI (solo pilastri) ═══
+    if (d.tipo === 'pilastro') {
+      html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Squadro angoli pilastro</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+      var nomiAngPil = ['Ant. SX','Ant. DX','Post. DX','Post. SX'];
+      for (var pai=0; pai<4; pai++) {
+        var av = angPil[pai] || 90;
+        var sc = Math.abs(av-90);
+        var acol = sc<0.5?'#56d6a4':sc<1.5?'#f4c560':'#ef5d6b';
+        html += detCard(nomiAngPil[pai], av.toFixed(1)+'\u00b0', acol);
+      }
+      html += '</div>';
+    }
 
         // Fuori squadro della parete dell'elemento
     var fs = window._realFuoriSquadro || {};
@@ -1755,8 +1798,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.17.2112 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.17.2112');
+  console.log('%c LayoutSync v2026.06.17.2122 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.2122');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
