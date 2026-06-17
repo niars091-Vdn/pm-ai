@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.1405</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.1433</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.1405</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.1433</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -416,8 +416,8 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <canvas id="c3" style="flex:1;width:100%;display:block;touch-action:none;min-height:0;"></canvas>
   <div class="i3bar">
-    <button class="zbtn" onclick="_zoom*=1.35;_zoom=Math.min(8,_zoom);draw3d();">+</button>
-    <button class="zbtn" onclick="_zoom*=0.74;_zoom=Math.max(0.2,_zoom);draw3d();">−</button>
+    <button class="zbtn" onclick="_zoom*=1.4;_zoom=Math.min(10,_zoom);draw3d();">+</button>
+    <button class="zbtn" onclick="_zoom*=0.7;_zoom=Math.max(0.3,_zoom);draw3d();">−</button>
     <div class="idiv"></div>
     <div class="i3s"><span class="v" id="i3w">--</span><span class="l">Largh.</span></div>
     <div class="idiv"></div>
@@ -1269,7 +1269,7 @@ function init3d() {
     if(e.target!==c3) return;
     e.preventDefault();
     if(e.touches.length===1&&_d3){_ry+=(e.touches[0].clientX-_lx3)*0.009;_rx+=(e.touches[0].clientY-_ly3)*0.009;_lx3=e.touches[0].clientX;_ly3=e.touches[0].clientY;draw3d();}
-    if(e.touches.length===2){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);_zoom*=Math.pow(d/_p3,2.0);_zoom=Math.max(0.2,Math.min(8,_zoom));_p3=d;draw3d();}
+    if(e.touches.length===2){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(_p3>0){_zoom*=(d/_p3);_zoom=Math.max(0.3,Math.min(10,_zoom));}_p3=d;draw3d();}
   },{passive:false});
   c3.addEventListener('touchend',function(e){if(e.target===c3)_d3=false;});
   var r=0; function ai(){if(r<0.55){_ry=r;r+=0.015;draw3d();requestAnimationFrame(ai);}else draw3d();} ai();
@@ -1290,9 +1290,11 @@ function pr3d(x,y,z){
   var tx=x-W/2,ty=y-H/2,tz=z-L/2;
   var rx=tx*Math.cos(_ry)-tz*Math.sin(_ry),rz=tx*Math.sin(_ry)+tz*Math.cos(_ry);
   var ry2=ty*Math.cos(_rx)-rz*Math.sin(_rx),rz2=ty*Math.sin(_rx)+rz*Math.cos(_rx);
-  var fov=440*_zoom,dd=fov/(fov+rz2+8);
+  var fov=440,dd=fov/(fov+rz2+8);
   var c3=document.getElementById('c3');
-  return[c3.width/2+rx*dd*52,c3.height/2-ry2*dd*52];
+  // _zoom moltiplica la scala finale -> zoom diretto ed evidente
+  var s=52*_zoom;
+  return[c3.width/2+rx*dd*s,c3.height/2-ry2*dd*s];
 }
 
 function draw3d(){
@@ -1464,8 +1466,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.17.1405 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.17.1405');
+  console.log('%c LayoutSync v2026.06.17.1433 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.1433');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
