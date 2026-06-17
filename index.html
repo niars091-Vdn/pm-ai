@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.15.1953</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.1352</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.15.1953</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.1352</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1083,7 +1083,6 @@ function runProc() {
   nxt();
   var t0 = Date.now();
   var timers = [setTimeout(nxt,2000),setTimeout(nxt,5000),setTimeout(nxt,9000),setTimeout(nxt,13000)];
-  
   function doneProc(larg, lung, anom, nPts) {
     timers.forEach(clearTimeout);
     steps.forEach(function(s) { document.getElementById(s).className = 'ps2 done'; });
@@ -1092,44 +1091,24 @@ function runProc() {
     document.getElementById('psub').textContent = 'Completato in ' + el + 's' + info;
     setTimeout(function() { showResults(el, anom||'0', larg||'--', lung||'--'); }, 800);
   }
-
   if (!SERVER) { setTimeout(function(){doneProc('3.85','4.20','2');},3500); return; }
-
   if (plyFile) {
-    toast('Invio ' + plyFile.name + ' in corso...');
+    toast('Invio ' + plyFile.name + ' (' + (plyFile.size/1024).toFixed(0) + 'KB) a ' + SERVER + '/analizza-ply');
     var fd = new FormData();
     fd.append('file', plyFile, plyFile.name);
     if (measures['w']) fd.append('larghezza', measures['w']);
     if (measures['l']) fd.append('lunghezza', measures['l']);
     if (measures['h']) fd.append('altezza', measures['h']);
-
     fetch(SERVER + '/analizza-ply', {method:'POST', body:fd})
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      var larg = r.headers.get('x-larghezza-rilevata') || r.headers.get('X-Larghezza-Rilevata') || '5.01';
-      var lung = r.headers.get('x-lunghezza-rilevata') || r.headers.get('X-Lunghezza-Rilevata') || '4.02';
+      // Leggi headers PRIMA di consumare il body
+      var larg = r.headers.get('x-larghezza-rilevata') || r.headers.get('X-Larghezza-Rilevata');
+      var lung = r.headers.get('x-lunghezza-rilevata') || r.headers.get('X-Lunghezza-Rilevata');
       var anom = r.headers.get('x-anomalie') || r.headers.get('X-Anomalie') || '0';
       var npts = r.headers.get('x-n-punti') || r.headers.get('X-N-Punti') || '?';
-      
-      // 1. TENTA DI LEGGERE I DATI DALL'AI PYTHON
-      var elementiRaw = r.headers.get('x-elementi') || r.headers.get('X-Elementi');
-      if (elementiRaw) {
-          try { window._elementiReali = JSON.parse(elementiRaw); } catch(e) {}
-      }
-
-      // 2. FALLBACK DI SICUREZZA
-      var isEmpty = !window._elementiReali || Object.keys(window._elementiReali).length === 0;
-      if (isEmpty) {
-          console.warn("Uso fallback cucina di test.");
-          window._elementiReali = {
-              "SUD":   [{tipo: "finestra", offset: parseFloat(larg)/2 - 0.75, larghezza: 1.50}],
-              "NORD":  [{tipo: "pilastro", offset: 2.40, larghezza: 0.40}],
-              "EST":   [{tipo: "porta", offset: 1.20, larghezza: 0.90}],
-              "OVEST": [{tipo: "pilastro", offset: 0.00, larghezza: 0.40}]
-          };
-      }
-
-      toast('Stanza rilevata: ' + larg + 'm x ' + lung + 'm');
+      var elapsed = r.headers.get('x-tempo-elaborazione') || '?';
+      toast('Stanza rilevata: ' + larg + 'm x ' + lung + 'm (' + npts + ' punti)');
       return r.blob().then(function(b) {
         zipBlob = b;
         zipName = 'layoutsync_reale.zip';
@@ -1137,20 +1116,23 @@ function runProc() {
       });
     })
     .catch(function(e) {
-      // SE IL SERVER VA IN ERRORE, INTERCETTALO E NON BLOCCARTI!
-      toast('ERRORE SERVER: ' + e.message + ' - Avvio Fallback');
-      
-      window._elementiReali = {
-          "SUD":   [{tipo: "finestra", offset: 5.01/2 - 0.75, larghezza: 1.50}],
-          "NORD":  [{tipo: "pilastro", offset: 2.40, larghezza: 0.40}],
-          "EST":   [{tipo: "porta", offset: 1.20, larghezza: 0.90}],
-          "OVEST": [{tipo: "pilastro", offset: 0.00, larghezza: 0.40}]
-      };
-      setTimeout(function() { doneProc('5.01', '4.02', '2', '28202'); }, 1000);
+      toast('ERRORE /analizza-ply: ' + e.message);
+      fetch(SERVER+'/demo').then(function(r2){
+        return r2.blob().then(function(b){
+          zipBlob=b;
+          doneProc(r2.headers.get('x-larghezza-rilevata'),r2.headers.get('x-lunghezza-rilevata'),r2.headers.get('x-anomalie'));
+        });
+      }).catch(function(){doneProc('--','--','0');});
     });
   } else {
     toast('Nessun file PLY - uso demo');
-    setTimeout(function() { doneProc('5.01', '4.02', '2', '28202'); }, 2000);
+    fetch(SERVER+'/demo').then(function(r){
+      if(!r.ok) throw new Error();
+      return r.blob().then(function(b){
+        zipBlob=b;
+        doneProc(r.headers.get('x-larghezza-rilevata'),r.headers.get('x-lunghezza-rilevata'),r.headers.get('x-anomalie'));
+      });
+    }).catch(function(){doneProc('3.85','4.20','2');});
   }
 }
 
@@ -1264,104 +1246,23 @@ function draw3d(){
   for(var x=0;x<=W;x+=0.5){var p1=pr3d(x,0,0),p2=pr3d(x,0,L);c.beginPath();c.strokeStyle='#2dd4bf';c.lineWidth=0.5;c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();}
   for(var z2=0;z2<=L;z2+=0.5){var p3=pr3d(0,0,z2),p4=pr3d(W,0,z2);c.beginPath();c.strokeStyle='#2dd4bf';c.lineWidth=0.5;c.moveTo(p3[0],p3[1]);c.lineTo(p4[0],p4[1]);c.stroke();}
   c.globalAlpha=1;
-  
-  // Funzioni di disegno
+  // Pannelli pareti
   function pn(pts,col,alpha){var pr=pts.map(function(p){return pr3d(p[0],p[1],p[2]);});c.beginPath();c.moveTo(pr[0][0],pr[0][1]);pr.slice(1).forEach(function(p){c.lineTo(p[0],p[1]);});c.closePath();c.fillStyle=col+Math.round((alpha||0.07)*255).toString(16).padStart(2,'0');c.fill();}
   function ln(x1,y1,z1,x2,y2,z2,col,lw,dash){var p1=pr3d(x1,y1,z1),p2=pr3d(x2,y2,z2);c.beginPath();c.strokeStyle=col;c.lineWidth=lw||2;c.setLineDash(dash||[]);c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();c.setLineDash([]);}
-  
-  // ── NUOVA FUNZIONE: ETICHETTE MULTI-RIGA ──
-  function lbl(x, y, z, lines, col, offY) {
-    var p = pr3d(x, y, z);
-    c.font='600 9px JetBrains Mono,monospace';
-    c.textAlign='center'; c.textBaseline='middle';
-    var tw = Math.max(...lines.map(l => c.measureText(l).width)) + 10;
-    var th = lines.length * 12 + 4;
-    var oy = offY || 0;
-    c.fillStyle='rgba(10,14,26,0.85)';
-    c.fillRect(p[0]-tw/2, p[1]-th/2 + oy, tw, th);
-    c.fillStyle=col;
-    lines.forEach((line, i) => {
-        c.fillText(line, p[0], p[1] - th/2 + 8 + (i*12) + oy);
-    });
-  }
-
   pn([[0,0,0],[W,0,0],[W,H,0],[0,H,0]],'#e2e8f0',0.06);
   pn([[0,0,L],[W,0,L],[W,H,L],[0,H,L]],'#e2e8f0',0.06);
   pn([[W,0,0],[W,0,L],[W,H,L],[W,H,0]],'#e2e8f0',0.06);
   pn([[0,0,0],[0,0,L],[0,H,L],[0,H,0]],'#e2e8f0',0.06);
   // Spigoli
   [[0,0,0,W,0,0],[W,0,0,W,0,L],[0,0,L,W,0,L],[0,0,0,0,0,L],[0,H,0,W,H,0],[W,H,0,W,H,L],[0,H,L,W,H,L],[0,H,0,0,H,L],[0,0,0,0,H,0],[W,0,0,W,H,0],[W,0,L,W,H,L],[0,0,L,0,H,L]].forEach(function(s){ln(s[0],s[1],s[2],s[3],s[4],s[5],'#e2e8f0',2);});
-
-  // ── RENDER DINAMICO ELEMENTI CON MISURE ──
-  if (window._elementiReali) {
-    Object.entries(window._elementiReali).forEach(function(entry) {
-      var parete = entry[0];
-      var els = entry[1];
-      if (!els) return;
-
-      els.forEach(function(el) {
-        var p_w = el.larghezza;
-        var o = el.offset;
-        var col = el.tipo === 'pilastro' ? '#94a3b8' : (el.tipo === 'finestra' ? '#85c1e9' : '#F39C12');
-        var alpha = el.tipo === 'pilastro' ? 0.15 : 0.35;
-        
-        var p1, p2, p3, p4;
-        var h0 = 0, h1 = H;
-        
-        if (el.tipo === 'finestra') { h0 = 0.9; h1 = 2.1; }
-        if (el.tipo === 'porta')    { h0 = 0.0; h1 = 2.1; }
-
-        var cx = 0, cz = 0; // Centro dell'elemento per l'etichetta
-        if (parete === 'SUD') { p1 = [o, h0, L]; p2 = [o+p_w, h0, L]; p3 = [o+p_w, h1, L]; p4 = [o, h1, L]; cx = o + p_w/2; cz = L; }
-        else if (parete === 'NORD') { p1 = [o, h0, 0]; p2 = [o+p_w, h0, 0]; p3 = [o+p_w, h1, 0]; p4 = [o, h1, 0]; cx = o + p_w/2; cz = 0; }
-        else if (parete === 'EST') { p1 = [W, h0, o]; p2 = [W, h0, o+p_w]; p3 = [W, h1, o+p_w]; p4 = [W, h1, o]; cx = W; cz = o + p_w/2; }
-        else if (parete === 'OVEST') { p1 = [0, h0, o]; p2 = [0, h0, o+p_w]; p3 = [0, h1, o+p_w]; p4 = [0, h1, o]; cx = 0; cz = o + p_w/2; }
-
-        pn([p1, p2, p3, p4], col, alpha);
-        ln(p1[0],p1[1],p1[2], p2[0],p2[1],p2[2], col, 2);
-        ln(p2[0],p2[1],p2[2], p3[0],p3[1],p3[2], col, 2);
-        ln(p3[0],p3[1],p3[2], p4[0],p4[1],p4[2], col, 2);
-        ln(p4[0],p4[1],p4[2], p1[0],p1[1],p1[2], col, 2);
-
-        if (el.tipo === 'pilastro') {
-            var pr = 0.30; 
-            var p5, p6, p7, p8;
-            if (parete === 'SUD') { p5 = [o, h0, L-pr]; p6 = [o+p_w, h0, L-pr]; p7 = [o+p_w, h1, L-pr]; p8 = [o, h1, L-pr]; }
-            else if (parete === 'NORD') { p5 = [o, h0, pr]; p6 = [o+p_w, h0, pr]; p7 = [o+p_w, h1, pr]; p8 = [o, h1, pr]; }
-            else if (parete === 'EST') { p5 = [W-pr, h0, o]; p6 = [W-pr, h0, o+p_w]; p7 = [W-pr, h1, o+p_w]; p8 = [W-pr, h1, o]; }
-            else if (parete === 'OVEST') { p5 = [pr, h0, o]; p6 = [pr, h0, o+p_w]; p7 = [pr, h1, o+p_w]; p8 = [pr, h1, o]; }
-            
-            pn([p5, p6, p7, p8], col, alpha);
-            ln(p5[0],p5[1],p5[2], p6[0],p6[1],p6[2], col, 1.5);
-            ln(p6[0],p6[1],p6[2], p7[0],p7[1],p7[2], col, 1.5);
-            ln(p7[0],p7[1],p7[2], p8[0],p8[1],p8[2], col, 1.5);
-            ln(p8[0],p8[1],p8[2], p5[0],p5[1],p5[2], col, 1.5);
-            ln(p1[0],p1[1],p1[2], p5[0],p5[1],p5[2], col, 1.5);
-            ln(p2[0],p2[1],p2[2], p6[0],p6[1],p6[2], col, 1.5);
-            ln(p3[0],p3[1],p3[2], p7[0],p7[1],p7[2], col, 1.5);
-            ln(p4[0],p4[1],p4[2], p8[0],p8[1],p8[2], col, 1.5);
-        }
-
-        // DISEGNA ETICHETTA DELL'ELEMENTO (Nome + Misura)
-        lbl(cx, (h0+h1)/2, cz, [el.tipo.toUpperCase(), p_w.toFixed(2) + 'm'], col);
-      });
-    });
-  }
-
   // Diagonali pavimento
   ln(0,0.02,0,W,0.02,L,'#a855f7',2,[8,4]);
   ln(W,0.02,0,0,0.02,L,'#f97316',2,[8,4]);
-  
-  // Quote Globali Muri
+  // Quote
   ln(0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
   ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
   ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
-  
-  lbl(W/2, 0, -0.45, [W.toFixed(2)+'m'], '#ef4444');
-  lbl(W+0.45, 0, L/2, [L.toFixed(2)+'m'], '#ef4444');
-  lbl(-0.5, H/2, 0, [H.toFixed(2)+'m'], '#94a3b8');
-
-  // ── ANGOLI INTERNI E FUORI SQUADRO ──
+  // Angoli interni ai 4 angoli della stanza
   var ra = window._realAngoli || {};
   var angoli=[
     {x:0,  y:-0.15,z:0,  nome:'SW', ang:(ra.SW||90).toFixed(1)},
@@ -1369,27 +1270,24 @@ function draw3d(){
     {x:W,  y:0,   z:L,  nome:'NE', ang:(ra.NE||90).toFixed(1)},
     {x:0,  y:0,   z:L,  nome:'NW', ang:(ra.NW||90).toFixed(1)},
   ];
-  
+  // Verde=OK, Giallo=attenzione, Rosso=critico
   angoli.forEach(function(a){
-    var p = pr3d(a.x, a.y, a.z);
-    var scarto = Math.abs(parseFloat(a.ang)-90);
-    var col = scarto < 0.5 ? '#10b981' : (scarto < 1.5 ? '#f59e0b' : '#ef4444');
-    
+    var p=pr3d(a.x,a.y,a.z);
+    var scarto=Math.abs(parseFloat(a.ang)-90);
+    var col=scarto<0.5?'#10b981':scarto<1.5?'#f59e0b':'#ef4444';
     // Cerchio angolo
     c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
     c.arc(p[0],p[1],10,0,Math.PI*2);c.stroke();
-    
-    // Etichetta con i gradi e il fuori squadro
-    var testoScarto = scarto > 0 ? 'Δ ' + scarto.toFixed(1) + '°' : 'OK';
-    lbl(a.x, a.y, a.z, [a.ang + '°', testoScarto], col, -24);
-  });
-}
-
-  // Label quote
-  [[W/2,0,-0.45,W.toFixed(2)+'m','#ef4444'],[W+0.45,0,L/2,L.toFixed(2)+'m','#ef4444'],[-0.5,H/2,0,H.toFixed(2)+'m','#94a3b8']].forEach(function(lb){
-    var p=pr3d(lb[0],lb[1],lb[2]);
-    c.fillStyle='rgba(10,14,26,0.8)';c.font='500 10px JetBrains Mono,monospace';c.textAlign='center';c.textBaseline='middle';
-    var tw=c.measureText(lb[3]).width+8;c.fillRect(p[0]-tw/2,p[1]-9,tw,18);c.fillStyle=lb[4];c.fillText(lb[3],p[0],p[1]);
+    // Testo gradi
+    c.fillStyle='rgba(10,14,26,0.85)';
+    c.font='500 9px JetBrains Mono,monospace';
+    c.textAlign='center';c.textBaseline='middle';
+    var tw=c.measureText(a.ang+'deg').width+6;
+    var offY=-20;
+    c.fillRect(p[0]-tw/2,p[1]+offY-8,tw,16);
+    c.fillStyle=col;
+    c.fillText(a.ang+'deg',p[0],p[1]+offY);
+    c.textBaseline='alphabetic';
   });
 }
 
@@ -1420,8 +1318,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.15.1953 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.15.1953');
+  console.log('%c LayoutSync v2026.06.17.1352 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.1352');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
