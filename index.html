@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2102</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2112</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2102</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2112</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1540,6 +1540,83 @@ function handle3dTap(clientX, clientY) {
   if (hit) openDetail(hit);
 }
 
+
+// ═══ SCHEMI 3D ISOMETRICI QUOTATI ═══
+function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
+  // Proiezione isometrica semplice
+  var sw=300, sh=230;
+  var ox=sw*0.5, oy=sh*0.52;  // origine
+  var sc=1; // scala disegnata
+  // Vettori isometrici (30 gradi)
+  var ax=Math.cos(Math.PI/6), ay=Math.sin(Math.PI/6);
+  function iso(x, y, z) {
+    // x=larghezza parete, y=altezza, z=profondita
+    return [ox + (x-z)*ax*40, oy - y*40 + (x+z)*ay*40*0.6];
+  }
+  var lw = Math.min(lungParete, 4); // limita per visualizzazione
+  var hh = (d.h1-d.h0);
+  var ew = d.larghezza;
+  var eo = (d.offset/lungParete)*lw; // offset scalato
+  var ewS = (ew/lungParete)*lw;
+
+  var svg = '<svg width="100%" viewBox="0 0 '+sw+' '+sh+'" style="display:block;">';
+
+  // Pavimento (griglia)
+  var f1=iso(0,0,0), f2=iso(lw,0,0), f3=iso(lw,0,1), f4=iso(0,0,1);
+  svg += '<polygon points="'+f1[0]+','+f1[1]+' '+f2[0]+','+f2[1]+' '+f3[0]+','+f3[1]+' '+f4[0]+','+f4[1]+'" fill="#1a2535" stroke="#2a3a52" stroke-width="1"/>';
+
+  // Parete di fondo
+  var w1=iso(0,0,0), w2=iso(lw,0,0), w3=iso(lw,2.7,0), w4=iso(0,2.7,0);
+  svg += '<polygon points="'+w1[0]+','+w1[1]+' '+w2[0]+','+w2[1]+' '+w3[0]+','+w3[1]+' '+w4[0]+','+w4[1]+'" fill="#172131" stroke="#39507a" stroke-width="1.5"/>';
+
+  if (d.tipo === 'pilastro') {
+    // Pilastro come volume 3D che sporge
+    var pr=0.5; // profondita disegnata
+    var p_base = eo;
+    var b1=iso(p_base,0,0), b2=iso(p_base+ewS,0,0), b3=iso(p_base+ewS,0,pr), b4=iso(p_base,0,pr);
+    var t1=iso(p_base,2.7,0), t2=iso(p_base+ewS,2.7,0), t3=iso(p_base+ewS,2.7,pr), t4=iso(p_base,2.7,pr);
+    // Facce
+    svg += '<polygon points="'+b4[0]+','+b4[1]+' '+b3[0]+','+b3[1]+' '+t3[0]+','+t3[1]+' '+t4[0]+','+t4[1]+'" fill="'+col+'" opacity="0.5" stroke="'+col+'" stroke-width="1.5"/>';
+    svg += '<polygon points="'+b2[0]+','+b2[1]+' '+b3[0]+','+b3[1]+' '+t3[0]+','+t3[1]+' '+t2[0]+','+t2[1]+'" fill="'+col+'" opacity="0.7" stroke="'+col+'" stroke-width="1.5"/>';
+    svg += '<polygon points="'+t1[0]+','+t1[1]+' '+t2[0]+','+t2[1]+' '+t3[0]+','+t3[1]+' '+t4[0]+','+t4[1]+'" fill="'+col+'" opacity="0.9" stroke="'+col+'" stroke-width="1.5"/>';
+    // Quote
+    svg += quota(b1, b2, (ew*100).toFixed(0), col, 18);
+    svg += quota(b2, b3, '30', col, 14);
+  } else {
+    // Porta/finestra come apertura sulla parete
+    var a_base = eo;
+    var ha = (d.h0/2.7)*2.7;
+    var o1=iso(a_base, d.h0, 0), o2=iso(a_base+ewS, d.h0, 0), o3=iso(a_base+ewS, d.h1, 0), o4=iso(a_base, d.h1, 0);
+    svg += '<polygon points="'+o1[0]+','+o1[1]+' '+o2[0]+','+o2[1]+' '+o3[0]+','+o3[1]+' '+o4[0]+','+o4[1]+'" fill="'+col+'" opacity="0.55" stroke="'+col+'" stroke-width="2"/>';
+    // Quote: larghezza (sotto) e altezza (lato)
+    svg += quota(o1, o2, (ew*100).toFixed(0), col, 16);
+    svg += quota(o2, o3, ((d.h1-d.h0)*100).toFixed(0), col, 16);
+    if (d.tipo === 'finestra') {
+      // Quota davanzale
+      var dav1=iso(a_base,0,0), dav2=iso(a_base,d.h0,0);
+      svg += quota(dav1, dav2, (d.h0*100).toFixed(0), '#85c1e9', -16);
+    }
+  }
+
+  // Quote distanze dagli angoli (sul pavimento) - separate verticalmente
+  var g0=iso(0,0,0), gE=iso(eo,0,0), gEnd=iso(lw,0,0), gElEnd=iso(eo+ewS,0,0);
+  svg += quota(g0, gE, (distSx*100).toFixed(0), '#5fe3d8', 38);
+  svg += quota(gElEnd, gEnd, (distDx*100).toFixed(0), '#5fe3d8', 38);
+
+  svg += '</svg>';
+  return svg;
+}
+
+// Helper: disegna una quota tra due punti con etichetta
+function quota(p1, p2, testo, col, off) {
+  var mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
+  var s = '<line x1="'+p1[0]+'" y1="'+(p1[1]+off)+'" x2="'+p2[0]+'" y2="'+(p2[1]+off)+'" stroke="'+col+'" stroke-width="1"/>';
+  s += '<line x1="'+p1[0]+'" y1="'+(p1[1]+off-3)+'" x2="'+p1[0]+'" y2="'+(p1[1]+off+3)+'" stroke="'+col+'" stroke-width="1"/>';
+  s += '<line x1="'+p2[0]+'" y1="'+(p2[1]+off-3)+'" x2="'+p2[0]+'" y2="'+(p2[1]+off+3)+'" stroke="'+col+'" stroke-width="1"/>';
+  s += '<text x="'+mx+'" y="'+(my+off+(off>0?12:-4))+'" fill="'+col+'" font-size="10" text-anchor="middle" font-family="monospace" font-weight="600">'+testo+'</text>';
+  return s;
+}
+
 function openDetail(zone) {
   var W = _3W, L = _3L, H = _3H;
   var html = '';
@@ -1593,34 +1670,14 @@ function openDetail(zone) {
     }
     html += '</div>';
 
-    // SCHEMA QUOTE VISIVO (mini disegno tecnico)
-    var svgW = 280, svgH = 90, mL = 30, mR = 30;
-    var wallPx = svgW - mL - mR;
-    var elemPxW = Math.max(20, (d.larghezza/lungParete)*wallPx);
-    var elemPxX = mL + (distSx/lungParete)*wallPx;
-    html += '<div style="margin-top:14px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;">';
-    html += '<svg width="100%" viewBox="0 0 '+svgW+' '+svgH+'" style="display:block;">';
-    // Linea parete
-    html += '<line x1="'+mL+'" y1="45" x2="'+(svgW-mR)+'" y2="45" stroke="#e2e8f0" stroke-width="3"/>';
-    // Elemento
-    html += '<rect x="'+elemPxX+'" y="38" width="'+elemPxW+'" height="14" fill="'+col+'" opacity="0.6" stroke="'+col+'" stroke-width="1.5"/>';
-    // Quota sinistra
-    html += '<line x1="'+mL+'" y1="62" x2="'+elemPxX+'" y2="62" stroke="#5fe3d8" stroke-width="1"/>';
-    html += '<text x="'+(mL+(elemPxX-mL)/2)+'" y="75" fill="#5fe3d8" font-size="9" text-anchor="middle" font-family="monospace">'+(distSx*100).toFixed(0)+'</text>';
-    // Quota elemento
-    html += '<line x1="'+elemPxX+'" y1="28" x2="'+(elemPxX+elemPxW)+'" y2="28" stroke="'+col+'" stroke-width="1"/>';
-    html += '<text x="'+(elemPxX+elemPxW/2)+'" y="22" fill="'+col+'" font-size="9" text-anchor="middle" font-family="monospace">'+(d.larghezza*100).toFixed(0)+'</text>';
-    // Quota destra
-    html += '<line x1="'+(elemPxX+elemPxW)+'" y1="62" x2="'+(svgW-mR)+'" y2="62" stroke="#5fe3d8" stroke-width="1"/>';
-    html += '<text x="'+((elemPxX+elemPxW)+(svgW-mR-elemPxX-elemPxW)/2)+'" y="75" fill="#5fe3d8" font-size="9" text-anchor="middle" font-family="monospace">'+(distDx*100).toFixed(0)+'</text>';
-    // Etichette angoli
-    html += '<text x="'+mL+'" y="38" fill="#94a3b8" font-size="8" text-anchor="middle">'+nomiAng[0].replace("angolo ","")+'</text>';
-    html += '<text x="'+(svgW-mR)+'" y="38" fill="#94a3b8" font-size="8" text-anchor="middle">'+nomiAng[1].replace("angolo ","")+'</text>';
-    html += '</svg>';
-    html += '<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:2px;">quote in cm</div>';
+    // SCHEMA 3D ISOMETRICO QUOTATO
+    html += '<div style="margin-top:14px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:12px;">';
+    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Schema quotato</div>';
+    html += schema3dElemento(d, W, L, col, distSx, distDx, lungParete);
+    html += '<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:4px;">misure in cm</div>';
     html += '</div>';
 
-    // Fuori squadro della parete dell'elemento
+        // Fuori squadro della parete dell'elemento
     var fs = window._realFuoriSquadro || {};
     if (fs[d.parete] !== undefined) {
       var fsv = fs[d.parete];
@@ -1698,8 +1755,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.17.2102 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.17.2102');
+  console.log('%c LayoutSync v2026.06.17.2112 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.2112');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
