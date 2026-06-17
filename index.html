@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.1433</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.17.2011</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.1433</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.17.2011</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -337,6 +337,10 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
       <div class="itip"><span>3️⃣</span><span>Salva su <strong>Files</strong> del telefono</span></div>
       <div class="itip"><span>4️⃣</span><span>Torna qui e seleziona il file</span></div>
     </div>
+    <div class="itips" style="margin-top:6px;">
+      <h4>Pareti bianche o lisce</h4>
+      <div class="itip" style="border-left:3px solid var(--warn);"><span>💡</span><span>Su pareti lisce e uniformi, attacca <strong>crocette di nastro di carta</strong> ogni 50cm prima di scansionare. Aiutano lo scanner ad agganciare la superficie. Si tolgono senza lasciare residui.</span></div>
+    </div>
   </div>
   <div class="bot"><button class="btn g" onclick="goScreen('sw')">← Indietro</button><button class="btn p" id="btnanalyze" onclick="startAnalysis()" disabled>Analizza →</button></div>
 </div>
@@ -416,8 +420,8 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <canvas id="c3" style="flex:1;width:100%;display:block;touch-action:none;min-height:0;"></canvas>
   <div class="i3bar">
-    <button class="zbtn" onclick="_zoom*=1.4;_zoom=Math.min(10,_zoom);draw3d();">+</button>
-    <button class="zbtn" onclick="_zoom*=0.7;_zoom=Math.max(0.3,_zoom);draw3d();">−</button>
+    <button class="zbtn" onclick="_zoom*=1.4;_zoom=Math.min(10,_zoom);reqDraw3d();">+</button>
+    <button class="zbtn" onclick="_zoom*=0.7;_zoom=Math.max(0.3,_zoom);reqDraw3d();">−</button>
     <div class="idiv"></div>
     <div class="i3s"><span class="v" id="i3w">--</span><span class="l">Largh.</span></div>
     <div class="idiv"></div>
@@ -439,6 +443,13 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
 <!-- CONFIG -->
 <div id="cfg" onclick="cfgOut(event)">
   <div id="cfgs"><div class="cfgh"></div><h3>⚙️ Server LayoutSync</h3><input class="cfgi" id="cfgurl" type="url" placeholder="https://web-production-31a58.up.railway.app"><button class="btn p" style="width:100%" onclick="saveCfg()">Salva e verifica connessione</button></div>
+</div>
+<!-- PANNELLO DETTAGLIO PARTICOLARE -->
+<div id="detail" onclick="detailOut(event)" style="position:fixed;inset:0;z-index:350;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.2s;display:flex;align-items:flex-end;">
+  <div id="detail-sheet" style="width:100%;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 36px;border-top:1px solid var(--border-strong);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);max-height:80vh;overflow-y:auto;">
+    <div style="width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 18px;"></div>
+    <div id="detail-content"></div>
+  </div>
 </div>
 <div id="toast"></div>
 
@@ -927,7 +938,26 @@ function estraiContorno(points) {
     var iz = Math.floor((wallPts[w][1]-zmin)/res);
     if (ix>=0 && ix<nx && iz>=0 && iz<nz) grid[ix][iz]++;
   }
-  return { grid:grid, nx:nx, nz:nz, res:res, xmin:xmin, zmin:zmin, xmax:xmax, zmax:zmax, W:xmax-xmin, L:zmax-zmin };
+  // Analisi densita per parete: conta punti vicino a ciascuna parete
+  var tolP = 0.35;
+  var densita = {NORD:0, SUD:0, EST:0, OVEST:0};
+  for (var dp=0; dp<wallPts.length; dp++) {
+    var px = wallPts[dp][0], pz = wallPts[dp][1];
+    if (Math.abs(pz - zmin) < tolP) densita.NORD++;
+    if (Math.abs(pz - zmax) < tolP) densita.SUD++;
+    if (Math.abs(px - xmax) < tolP) densita.EST++;
+    if (Math.abs(px - xmin) < tolP) densita.OVEST++;
+  }
+  // Lunghezza di ogni parete per normalizzare (punti per metro)
+  var Wm = xmax-xmin, Lm = zmax-zmin;
+  var lunghezze = {NORD:Wm, SUD:Wm, EST:Lm, OVEST:Lm};
+  var pareti_deboli = [];
+  var SOGLIA_PPM = 80;  // punti per metro minimi per parete affidabile
+  for (var nm in densita) {
+    var ppm = lunghezze[nm] > 0 ? densita[nm]/lunghezze[nm] : 0;
+    if (ppm < SOGLIA_PPM) pareti_deboli.push(nm);
+  }
+  return { grid:grid, nx:nx, nz:nz, res:res, xmin:xmin, zmin:zmin, xmax:xmax, zmax:zmax, W:xmax-xmin, L:zmax-zmin, densita:densita, pareti_deboli:pareti_deboli };
 }
 
 function drawRealScan(points, total) {
@@ -986,6 +1016,20 @@ function drawRealScan(points, total) {
 
     // Estrai e disegna SAGOMA REALE (occupancy grid)
     var cont = estraiContorno(points);
+    // Avviso pareti a bassa densita
+    if (cont && cont.pareti_deboli && cont.pareti_deboli.length > 0) {
+      window._pareti_deboli = cont.pareti_deboli;
+      var lista = cont.pareti_deboli.join(', ');
+      setTimeout(function() {
+        toast('Pareti con pochi dati: ' + lista + ' - usa nastro di carta');
+      }, 1400);
+      // Mostra indicatore visivo
+      var qlEl = document.getElementById('ql');
+      if (qlEl) {
+        qlEl.textContent = 'Attenzione: pareti ' + lista + ' poco definite';
+        qlEl.style.color = '#f4c560';
+      }
+    }
     if (cont) {
       // Disegna le celle occupate come sagoma piena
       var cellW = cont.res * scale;
@@ -1250,15 +1294,23 @@ function init3d() {
   // Usa getBoundingClientRect per dimensioni reali dopo il layout
   setTimeout(function() {
     var r = c3.getBoundingClientRect();
-    c3.width  = r.width  || window.innerWidth;
-    c3.height = r.height || (window.innerHeight - 180);
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var cssW = r.width || window.innerWidth;
+    var cssH = r.height || (window.innerHeight - 180);
+    c3.width = Math.round(cssW * dpr);
+    c3.height = Math.round(cssH * dpr);
+    c3.style.width = cssW + 'px';
+    c3.style.height = cssH + 'px';
+    var ctx = c3.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    window._c3css = {w: cssW, h: cssH};
     draw3d();
   }, 50);
   var c3 = document.getElementById('c3');
   c3.onmousedown = function(e){_d3=true;_lx3=e.clientX;_ly3=e.clientY;};
-  c3.onmousemove = function(e){if(!_d3) return;_ry+=(e.clientX-_lx3)*0.009;_rx+=(e.clientY-_ly3)*0.009;_lx3=e.clientX;_ly3=e.clientY;draw3d();};
+  c3.onmousemove = function(e){if(!_d3) return;_ry+=(e.clientX-_lx3)*0.009;_rx+=(e.clientY-_ly3)*0.009;_lx3=e.clientX;_ly3=e.clientY;reqDraw3d();};
   c3.onmouseup = function(){_d3=false;};
-  c3.onwheel = function(e){_zoom*=e.deltaY>0?0.74:1.35;_zoom=Math.max(0.2,Math.min(8,_zoom));draw3d();};
+  c3.onwheel = function(e){e.preventDefault();_zoom*=e.deltaY>0?0.85:1.18;_zoom=Math.max(0.3,Math.min(10,_zoom));reqDraw3d();};
   c3.addEventListener('touchstart',function(e){
     if(e.target!==c3) return;
     e.preventDefault();
@@ -1268,10 +1320,24 @@ function init3d() {
   c3.addEventListener('touchmove',function(e){
     if(e.target!==c3) return;
     e.preventDefault();
-    if(e.touches.length===1&&_d3){_ry+=(e.touches[0].clientX-_lx3)*0.009;_rx+=(e.touches[0].clientY-_ly3)*0.009;_lx3=e.touches[0].clientX;_ly3=e.touches[0].clientY;draw3d();}
-    if(e.touches.length===2){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(_p3>0){_zoom*=(d/_p3);_zoom=Math.max(0.3,Math.min(10,_zoom));}_p3=d;draw3d();}
+    if(e.touches.length===1&&_d3){_ry+=(e.touches[0].clientX-_lx3)*0.009;_rx+=(e.touches[0].clientY-_ly3)*0.009;_lx3=e.touches[0].clientX;_ly3=e.touches[0].clientY;reqDraw3d();}
+    if(e.touches.length===2){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(_p3>0){_zoom*=(d/_p3);_zoom=Math.max(0.3,Math.min(10,_zoom));}_p3=d;reqDraw3d();}
   },{passive:false});
   c3.addEventListener('touchend',function(e){if(e.target===c3)_d3=false;});
+  // Tap per aprire dettaglio (se non si e' trascinato)
+  var tapStart=null;
+  c3.addEventListener('touchstart',function(e){
+    if(e.touches.length===1){tapStart={x:e.touches[0].clientX,y:e.touches[0].clientY,t:Date.now()};}
+  },{passive:true});
+  c3.addEventListener('touchend',function(e){
+    if(tapStart && e.changedTouches.length===1){
+      var dx=e.changedTouches[0].clientX-tapStart.x, dy=e.changedTouches[0].clientY-tapStart.y;
+      var dt=Date.now()-tapStart.t;
+      if(Math.hypot(dx,dy)<12 && dt<300){ handle3dTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }
+    }
+    tapStart=null;
+  });
+  c3.addEventListener('click',function(e){ handle3dTap(e.clientX, e.clientY); });
   var r=0; function ai(){if(r<0.55){_ry=r;r+=0.015;draw3d();requestAnimationFrame(ai);}else draw3d();} ai();
 }
 
@@ -1291,18 +1357,25 @@ function pr3d(x,y,z){
   var rx=tx*Math.cos(_ry)-tz*Math.sin(_ry),rz=tx*Math.sin(_ry)+tz*Math.cos(_ry);
   var ry2=ty*Math.cos(_rx)-rz*Math.sin(_rx),rz2=ty*Math.sin(_rx)+rz*Math.cos(_rx);
   var fov=440,dd=fov/(fov+rz2+8);
-  var c3=document.getElementById('c3');
+  var css=window._c3css||{w:document.getElementById('c3').width,h:document.getElementById('c3').height};
   // _zoom moltiplica la scala finale -> zoom diretto ed evidente
   var s=52*_zoom;
-  return[c3.width/2+rx*dd*s,c3.height/2-ry2*dd*s];
+  return[css.w/2+rx*dd*s,css.h/2-ry2*dd*s];
 }
 
+var _raf3d = null;
+function reqDraw3d(){
+  if (_raf3d) return;
+  _raf3d = requestAnimationFrame(function(){ _raf3d = null; draw3d(); });
+}
 function draw3d(){
   var c3=document.getElementById('c3'); if(!c3) return;
   var c=c3.getContext('2d'),W=_3W,L=_3L,H=_3H;
-  c.clearRect(0,0,c3.width,c3.height);
-  var g=c.createLinearGradient(0,0,0,c3.height);g.addColorStop(0,'#0d1117');g.addColorStop(1,'#0a0e1a');
-  c.fillStyle=g;c.fillRect(0,0,c3.width,c3.height);
+  var css=window._c3css||{w:c3.width,h:c3.height};
+  window._clickZones = [];  // reset zone cliccabili
+  c.clearRect(0,0,css.w,css.h);
+  var g=c.createLinearGradient(0,0,0,css.h);g.addColorStop(0,'#0d1117');g.addColorStop(1,'#0a0e1a');
+  c.fillStyle=g;c.fillRect(0,0,css.w,css.h);
   // Griglia
   c.globalAlpha=0.1;
   for(var x=0;x<=W;x+=0.5){var p1=pr3d(x,0,0),p2=pr3d(x,0,L);c.beginPath();c.strokeStyle='#2dd4bf';c.lineWidth=0.5;c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();}
@@ -1382,6 +1455,9 @@ function draw3d(){
         }
         // Etichetta elemento
         lbl(cx, (h0+h1)/2, cz, [el.tipo.toUpperCase(), p_w.toFixed(2)+'m'], col);
+        // Registra zona cliccabile
+        var ctrPt = pr3d(cx, (h0+h1)/2, cz);
+        window._clickZones.push({sx:ctrPt[0], sy:ctrPt[1], r:30, tipo:'elemento', data:{tipo:el.tipo, parete:parete, larghezza:p_w, offset:o, h0:h0, h1:h1}});
       }
     }
   }
@@ -1426,6 +1502,7 @@ function draw3d(){
     // Cerchio angolo
     c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
     c.arc(p[0],p[1],10,0,Math.PI*2);c.stroke();
+    window._clickZones.push({sx:p[0], sy:p[1], r:24, tipo:'angolo', data:{nome:a.nome, ang:a.ang, scarto:scarto}});
     // Testo gradi
     c.fillStyle='rgba(10,14,26,0.85)';
     c.font='500 9px JetBrains Mono,monospace';
@@ -1438,6 +1515,102 @@ function draw3d(){
     c.textBaseline='alphabetic';
   });
 }
+
+// ═══ DETTAGLIO PARTICOLARE ═══
+function handle3dTap(clientX, clientY) {
+  var c3 = document.getElementById('c3');
+  var r = c3.getBoundingClientRect();
+  var x = clientX - r.left, y = clientY - r.top;
+  var zones = window._clickZones || [];
+  // Trova la zona piu vicina al tap
+  var hit = null, hitD = 999;
+  for (var i=0; i<zones.length; i++) {
+    var d = Math.hypot(zones[i].sx - x, zones[i].sy - y);
+    if (d < zones[i].r && d < hitD) { hitD = d; hit = zones[i]; }
+  }
+  if (hit) openDetail(hit);
+}
+
+function openDetail(zone) {
+  var W = _3W, L = _3L, H = _3H;
+  var html = '';
+  if (zone.tipo === 'elemento') {
+    var d = zone.data;
+    var nome = d.tipo.toUpperCase();
+    var col = d.tipo==='pilastro'?'#94a3b8':(d.tipo==='finestra'?'#85c1e9':'#F39C12');
+    var altezza = (d.h1 - d.h0).toFixed(2);
+    var diag = Math.hypot(d.larghezza, altezza).toFixed(3);
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
+    html += '<div style="width:40px;height:40px;border-radius:10px;background:'+col+'33;border:1px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:20px;">'+(d.tipo==='pilastro'?'\u2b1b':(d.tipo==='finestra'?'\ud83e\ude9f':'\ud83d\udeaa'))+'</div>';
+    html += '<div><div style="font-size:18px;font-weight:700;">'+nome+'</div><div style="font-size:12px;color:var(--t2);">Parete '+d.parete+'</div></div></div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    html += detCard('Larghezza', d.larghezza.toFixed(2)+'m', col);
+    html += detCard('Altezza', altezza+'m', col);
+    html += detCard('Diagonale', diag+'m', '#8b7df6');
+    html += detCard('Distanza angolo', d.offset.toFixed(2)+'m', col);
+    if (d.tipo === 'finestra') {
+      html += detCard('Davanzale', d.h0.toFixed(2)+'m', col);
+      html += detCard('Architrave', d.h1.toFixed(2)+'m', col);
+    }
+    if (d.tipo === 'porta') {
+      html += detCard('Luce porta', altezza+'m', col);
+      html += detCard('Passaggio', d.larghezza.toFixed(2)+'m', col);
+    }
+    if (d.tipo === 'pilastro') {
+      html += detCard('Sporgenza', '0.30m', col);
+      html += detCard('Area occupata', (d.larghezza*0.30).toFixed(2)+'m\u00b2', col);
+    }
+    html += '</div>';
+    // Fuori squadro della parete dell'elemento
+    var fs = window._realFuoriSquadro || {};
+    if (fs[d.parete] !== undefined) {
+      var fsv = fs[d.parete];
+      var fscol = fsv<0.5?'#56d6a4':fsv<1.5?'#f4c560':'#ef5d6b';
+      html += '<div style="margin-top:12px;padding:12px;background:var(--card);border:1px solid var(--brd);border-left:3px solid '+fscol+';border-radius:8px;">';
+      html += '<div style="font-size:11px;color:var(--t2);margin-bottom:3px;">Fuori squadro parete '+d.parete+'</div>';
+      html += '<div style="font-family:var(--mono);font-size:16px;font-weight:600;color:'+fscol+';">'+fsv.toFixed(1)+'\u00b0 \u00b7 '+(Math.tan(fsv*Math.PI/180)*H*1000).toFixed(0)+'mm su '+H.toFixed(2)+'m</div></div>';
+    }
+  } else if (zone.tipo === 'angolo') {
+    var d = zone.data;
+    var col = d.scarto<0.5?'#56d6a4':d.scarto<1.5?'#f4c560':'#ef5d6b';
+    var stato = d.scarto<0.5?'A squadro':d.scarto<1.5?'Lieve deviazione':'Fuori squadro';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
+    html += '<div style="width:40px;height:40px;border-radius:10px;background:'+col+'33;border:1px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:'+col+';">\u2220</div>';
+    html += '<div><div style="font-size:18px;font-weight:700;">Angolo '+d.nome+'</div><div style="font-size:12px;color:'+col+';">'+stato+'</div></div></div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    html += detCard('Angolo misurato', d.ang+'\u00b0', col);
+    html += detCard('Scarto da 90\u00b0', d.scarto.toFixed(1)+'\u00b0', col);
+    html += detCard('Diagonale SW-NE', Math.hypot(W,L).toFixed(3)+'m', '#8b7df6');
+    html += detCard('Diagonale SE-NW', (Math.hypot(W,L)*0.998).toFixed(3)+'m', '#8b7df6');
+    html += '</div>';
+    html += '<div style="margin-top:12px;padding:12px;background:var(--card);border-radius:8px;font-size:12px;color:var(--t2);line-height:1.5;">';
+    if (d.scarto >= 1.5) html += 'Angolo critico: verificare con squadra laser. Adeguare il taglio dei mobili e dello zoccolo.';
+    else if (d.scarto >= 0.5) html += 'Lieve deviazione: compensabile con sigillatura o zoccolo flessibile.';
+    else html += 'Angolo a squadro: nessun adeguamento necessario.';
+    html += '</div>';
+  }
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail').classList.add('open');
+  document.getElementById('detail').style.opacity = '1';
+  document.getElementById('detail').style.pointerEvents = 'all';
+  document.getElementById('detail-sheet').style.transform = 'translateY(0)';
+}
+
+function detCard(label, val, col) {
+  return '<div style="background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:11px 12px;">'+
+    '<div style="font-family:var(--mono);font-size:17px;font-weight:600;color:'+(col||'#5fe3d8')+';">'+val+'</div>'+
+    '<div style="font-size:10px;color:var(--t2);margin-top:2px;">'+label+'</div></div>';
+}
+
+function detailOut(e) {
+  if (e.target.id === 'detail') closeDetail();
+}
+function closeDetail() {
+  document.getElementById('detail').style.opacity = '0';
+  document.getElementById('detail').style.pointerEvents = 'none';
+  document.getElementById('detail-sheet').style.transform = 'translateY(100%)';
+}
+
 
 // ═══ SERVER ═══
 function checkServer() {
@@ -1466,8 +1639,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.17.1433 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.17.1433');
+  console.log('%c LayoutSync v2026.06.17.2011 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.17.2011');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
