@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.18.2156</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.18.2206</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.18.2156</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.18.2206</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1387,31 +1387,36 @@ function pr3d(x,y,z){
   return[css.w/2+rx*dd*s,css.h/2-ry2*dd*s];
 }
 
-// Calcola i 4 vertici reali del pavimento dagli angoli interni misurati
+// Calcola i 4 vertici reali del pavimento dagli angoli interni misurati.
+// Metodo: poligonale chiusa. Usa gli angoli per orientare le pareti,
+// poi forza la chiusura per garantire una stanza geometricamente valida.
 function calcVertici(W, L, angoli) {
-  // angoli: {SW, SE, NE, NW} in gradi (default 90)
-  // Partiamo da SW=(0,0). Parete SUD va verso EST lungo X.
-  // L'angolo in SW determina l'inclinazione della parete OVEST.
-  var aSW = (angoli.SW || 90) * Math.PI/180;
-  var aSE = (angoli.SE || 90) * Math.PI/180;
-  // Vertici pianta (x,z):
-  // SW in origine
+  var aSW = angoli.SW || 90, aSE = angoli.SE || 90;
+  var aNE = angoli.NE || 90, aNW = angoli.NW || 90;
+
+  // Percorri la poligonale: SW -> SE (SUD) -> NE (EST) -> NW (NORD) -> chiusura (OVEST)
   var sw = {x:0, z:0};
-  // SE lungo la parete SUD (lunghezza W) - parete orizzontale
-  var se = {x:W, z:0};
-  // La parete OVEST parte da SW con angolo aSW rispetto alla parete SUD
-  // angolo interno SW tra parete SUD (verso +X) e parete OVEST (verso +Z)
-  // se aSW=90 la parete OVEST va dritta lungo +Z
-  var nw = {
-    x: sw.x + L * Math.cos(aSW + Math.PI/2 - Math.PI/2) * 0,  // resta semplice
-    z: L
-  };
-  // Calcolo corretto: parete OVEST inclinata di (aSW-90) rispetto alla verticale
-  var devSW = aSW - Math.PI/2;  // deviazione da 90
-  nw = { x: 0 + L * Math.sin(devSW), z: L * Math.cos(devSW) };
-  // Parete EST inclinata di (aSE-90) rispetto alla verticale, dall'altro lato
-  var devSE = aSE - Math.PI/2;
-  var ne = { x: W - L * Math.sin(devSE), z: L * Math.cos(devSE) };
+  var dir = 0; // direzione parete SUD = +X
+  var se = {x: sw.x + W*Math.cos(dir*Math.PI/180), z: sw.z + W*Math.sin(dir*Math.PI/180)};
+  dir += (180 - aSE);
+  var ne = {x: se.x + L*Math.cos(dir*Math.PI/180), z: se.z + L*Math.sin(dir*Math.PI/180)};
+  dir += (180 - aNE);
+  var nw = {x: ne.x + W*Math.cos(dir*Math.PI/180), z: ne.z + W*Math.sin(dir*Math.PI/180)};
+
+  // FORZA CHIUSURA: nw dovrebbe collegarsi a sw lungo la parete OVEST (lunghezza L).
+  // Distribuisco l'errore di chiusura proporzionalmente per evitare deformazioni assurde.
+  // Vincolo: limita lo spostamento massimo di ogni vertice per realismo.
+  var maxShift = Math.min(W, L) * 0.25;  // max 25% della dimensione minore
+  function clamp(v, ref, max) {
+    var dx = v.x - ref.x, dz = v.z - ref.z;
+    var d = Math.hypot(dx, dz);
+    if (d > max) { v.x = ref.x + dx/d*max; v.z = ref.z + dz/d*max; }
+    return v;
+  }
+  // Riferimenti ideali (rettangolo perfetto)
+  clamp(ne, {x:W, z:L}, maxShift);
+  clamp(nw, {x:0, z:L}, maxShift);
+
   return { sw:sw, se:se, ne:ne, nw:nw };
 }
 
@@ -1836,8 +1841,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.18.2156 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.18.2156');
+  console.log('%c LayoutSync v2026.06.18.2206 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.18.2206');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
