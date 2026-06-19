@@ -223,6 +223,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
 
 @keyframes spin{to{transform:rotate(360deg);}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 </head>
 <body>
 
@@ -233,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.19.1945</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.19.2044</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.19.1945</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.19.2044</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1188,7 +1189,18 @@ function runProc() {
       return r.blob().then(function(b) {
         zipBlob = b;
         zipName = 'layoutsync_reale.zip';
-        doneProc(larg, lung, anom, npts);
+        // Estrai poligono.json dallo ZIP per disegnare la forma reale
+        return b.arrayBuffer().then(function(buf){
+          try {
+            var files = fflate.unzipSync(new Uint8Array(buf));
+            if (files['poligono.json']) {
+              var txt = fflate.strFromU8(files['poligono.json']);
+              window._poligonoReale = JSON.parse(txt);
+              console.log('Poligono reale caricato:', window._poligonoReale.n_lati, 'lati');
+            }
+          } catch(e){ console.warn('Poligono non estratto:', e); }
+          doneProc(larg, lung, anom, npts);
+        });
       });
     })
     .catch(function(e) {
@@ -1441,21 +1453,44 @@ function draw3d(){
   // Pannelli pareti
   function pn(pts,col,alpha){var pr=pts.map(function(p){return pr3d(p[0],p[1],p[2]);});c.beginPath();c.moveTo(pr[0][0],pr[0][1]);pr.slice(1).forEach(function(p){c.lineTo(p[0],p[1]);});c.closePath();c.fillStyle=col+Math.round((alpha||0.07)*255).toString(16).padStart(2,'0');c.fill();}
   function ln(x1,y1,z1,x2,y2,z2,col,lw,dash){var p1=pr3d(x1,y1,z1),p2=pr3d(x2,y2,z2);c.beginPath();c.strokeStyle=col;c.lineWidth=lw||2;c.setLineDash(dash||[]);c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();c.setLineDash([]);}
-  // VERTICI REALI del pavimento dagli angoli misurati
-  var ra0 = window._realAngoli || {};
-  var V = calcVertici(W, L, ra0);
-  var sw=V.sw, se=V.se, ne=V.ne, nw=V.nw;
-  // 4 pareti come quadrilateri reali (non piu rettangoli)
-  // SUD (sw-se), EST (se-ne), NORD (ne-nw), OVEST (nw-sw)
-  pn([[sw.x,0,sw.z],[se.x,0,se.z],[se.x,H,se.z],[sw.x,H,sw.z]],'#e2e8f0',0.06); // SUD
-  pn([[se.x,0,se.z],[ne.x,0,ne.z],[ne.x,H,ne.z],[se.x,H,se.z]],'#e2e8f0',0.06); // EST
-  pn([[ne.x,0,ne.z],[nw.x,0,nw.z],[nw.x,H,nw.z],[ne.x,H,ne.z]],'#e2e8f0',0.06); // NORD
-  pn([[nw.x,0,nw.z],[sw.x,0,sw.z],[sw.x,H,sw.z],[nw.x,H,nw.z]],'#e2e8f0',0.06); // OVEST
-  // Spigoli reali
+  // ── DISEGNO PARETI: poligono REALE a N lati se disponibile, altrimenti box ──
+  var polig = window._poligonoReale;
+  var vertici3d = [];
+  if (polig && polig.vertici && polig.vertici.length >= 3) {
+    // Usa il poligono reale estratto dal point cloud
+    // I vertici sono in coordinate metriche (x,z) sul piano pianta
+    // Centra e scala per adattarli al sistema della vista 3D
+    var vx = polig.vertici.map(function(v){return v[0];});
+    var vz = polig.vertici.map(function(v){return v[1];});
+    var minX = Math.min.apply(null,vx), maxX = Math.max.apply(null,vx);
+    var minZ = Math.min.apply(null,vz), maxZ = Math.max.apply(null,vz);
+    var cxP = (minX+maxX)/2, czP = (minZ+maxZ)/2;
+    // Trasla così che il centro del poligono sia al centro stanza (W/2, L/2)
+    vertici3d = polig.vertici.map(function(v){
+      return {x: v[0]-cxP + W/2, z: v[1]-czP + L/2};
+    });
+  } else {
+    // Fallback: box rettangolare dai 4 angoli
+    var ra0 = window._realAngoli || {};
+    var V = calcVertici(W, L, ra0);
+    vertici3d = [V.sw, V.se, V.ne, V.nw];
+  }
+
+  var nV = vertici3d.length;
+  // Disegna ogni parete come quadrilatero verticale
+  for (var vi=0; vi<nV; vi++) {
+    var a = vertici3d[vi];
+    var b = vertici3d[(vi+1)%nV];
+    pn([[a.x,0,a.z],[b.x,0,b.z],[b.x,H,b.z],[a.x,H,a.z]],'#e2e8f0',0.05);
+  }
+  // Spigoli orizzontali (alto e basso) e verticali
   function edge(a,b,col,lw){ln(a.x,0,a.z,b.x,0,b.z,col,lw);ln(a.x,H,a.z,b.x,H,b.z,col,lw);}
-  edge(sw,se,'#e2e8f0',2); edge(se,ne,'#e2e8f0',2); edge(ne,nw,'#e2e8f0',2); edge(nw,sw,'#e2e8f0',2);
-  // Spigoli verticali
-  [sw,se,ne,nw].forEach(function(v){ln(v.x,0,v.z,v.x,H,v.z,'#e2e8f0',2);});
+  for (var vi2=0; vi2<nV; vi2++) {
+    edge(vertici3d[vi2], vertici3d[(vi2+1)%nV], '#e2e8f0', 2);
+  }
+  vertici3d.forEach(function(v){ln(v.x,0,v.z,v.x,H,v.z,'#e2e8f0',2);});
+  // Compatibilita: mantieni sw/se/ne/nw per il resto del codice
+  var sw=vertici3d[0], se=vertici3d[1]||vertici3d[0], ne=vertici3d[2]||vertici3d[0], nw=vertici3d[3]||vertici3d[0];
 
   // Helper etichetta multi-riga
   function lbl(x, y, z, lines, col, offY) {
@@ -2061,8 +2096,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.19.1945 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.19.1945');
+  console.log('%c LayoutSync v2026.06.19.2044 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.19.2044');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
