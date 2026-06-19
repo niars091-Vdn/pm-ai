@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.19.1558</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.19.1945</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.19.1558</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.19.1945</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1893,18 +1893,19 @@ function drawSchema() {
   c.clearRect(0,0,css.w,css.h);
   var sd = window._schemaData;
   var d = sd.d, col = sd.col;
-  var lung = Math.min(sd.lungParete, 4);
-  var ew = Math.max(d.larghezza, lung*0.10);
+  var lung = Math.min(sd.lungParete, 5);
+  var ew = Math.max(d.larghezza, lung*0.06);
   var eo = (d.offset/sd.lungParete)*lung;
   var prof = d.profondita || 0.30;
   var Hh = 2.7;
-  var cx = css.w/2, cy = css.h*0.55;
-  var SK = 42 * _schZoom;
+  var cx = css.w/2, cy = css.h*0.50;
+  // Scala automatica: inquadra l'intera parete (lung) nel canvas
+  var SK = (css.w / (lung + 1.2)) * _schZoom;
 
   // Proiezione 3D con rotazione libera
   function pr(x,y,z){
-    // centra sul pilastro
-    var tx=x-(eo+ew/2), ty=y-Hh/2, tz=z-prof/2;
+    // centra sulla PARETE (non sul pilastro) per mostrare gli angoli SX e DX
+    var tx=x-(lung/2), ty=y-Hh/2, tz=z-prof/2;
     var rx=tx*Math.cos(_schRy)-tz*Math.sin(_schRy);
     var rz=tx*Math.sin(_schRy)+tz*Math.cos(_schRy);
     var ry2=ty*Math.cos(_schRx)-rz*Math.sin(_schRx);
@@ -1922,10 +1923,10 @@ function drawSchema() {
   }
   function line3(a,b,stroke,lw){var p1=pr(a[0],a[1],a[2]),p2=pr(b[0],b[1],b[2]);c.beginPath();c.strokeStyle=stroke;c.lineWidth=lw||1.5;c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();}
 
-  // Pavimento riferimento
-  poly([[eo-0.6,0,-0.4],[eo+ew+0.6,0,-0.4],[eo+ew+0.6,0,prof+0.4],[eo-0.6,0,prof+0.4]], '#1a2535',1,'#2a3a52',1);
-  // Parete (piano z=0)
-  poly([[eo-0.8,0,0],[eo+ew+0.8,0,0],[eo+ew+0.8,Hh,0],[eo-0.8,Hh,0]], '#172131',1,'#39507a',1.5);
+  // Pavimento riferimento (tutta la parete)
+  poly([[0,0,-0.4],[lung,0,-0.4],[lung,0,prof+0.4],[0,0,prof+0.4]], '#1a2535',1,'#2a3a52',1);
+  // Parete intera (piano z=0) dall'angolo SX all'angolo DX
+  poly([[0,0,0],[lung,0,0],[lung,Hh,0],[0,Hh,0]], '#172131',1,'#39507a',1.5);
 
   // Pilastro: 8 vertici
   var x0=eo, x1=eo+ew, z0=0, z1=prof;
@@ -1977,6 +1978,44 @@ function drawSchema() {
   }
   qLabel([x0,0,z1],[x1,0,z1], (d.larghezza*100).toFixed(0), col);
   qLabel([x1,0,z0],[x1,0,z1], (prof*100).toFixed(0), '#f4c560');
+
+  // ── QUOTE POSIZIONAMENTO: distanze dagli angoli SX e DX della parete ──
+  // Angolo SX = inizio parete (x=0), angolo DX = fine parete (x=lung)
+  // Disegno la linea di terra lungo la base della parete
+  var aSX = 0, aDX = lung;
+  // Linea di terra dall'angolo SX all'angolo DX (riferimento)
+  line3([aSX,0,0],[aDX,0,0], 'rgba(95,227,216,0.3)', 1);
+  // Tacche verticali agli angoli
+  line3([aSX,0,0],[aSX,0.25,0], '#5fe3d8', 1.5);
+  line3([aDX,0,0],[aDX,0.25,0], '#5fe3d8', 1.5);
+  // Quota distanza SX (da angolo SX al bordo sinistro del pilastro) - leggermente sotto
+  var qy = -0.35;  // sotto il pavimento
+  function qLabelLow(a,b,testo,qcol,nome){
+    var p1=pr(a[0],a[1],a[2]),p2=pr(b[0],b[1],b[2]);
+    var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;
+    c.beginPath();c.strokeStyle=qcol;c.lineWidth=1.2;
+    // tacche estremità
+    c.moveTo(p1[0],p1[1]-4);c.lineTo(p1[0],p1[1]+4);
+    c.moveTo(p2[0],p2[1]-4);c.lineTo(p2[0],p2[1]+4);
+    c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();
+    c.font='700 11px JetBrains Mono,monospace';
+    var tw=c.measureText(testo).width+8;
+    c.fillStyle='rgba(15,23,34,0.92)';c.fillRect(mx-tw/2,my+6,tw,16);
+    c.strokeStyle=qcol;c.lineWidth=0.8;c.strokeRect(mx-tw/2,my+6,tw,16);
+    c.fillStyle=qcol;c.textAlign='center';c.textBaseline='middle';
+    c.fillText(testo,mx,my+14);c.textBaseline='alphabetic';
+    // etichetta nome angolo
+    if(nome){c.fillStyle=qcol;c.font='600 8px Inter,sans-serif';c.fillText(nome, (a[0]===aSX||b[0]===aSX)?p1[0]:p2[0], my+30);}
+  }
+  // Distanza da SX al pilastro
+  qLabelLow([aSX,0,0],[x0,0,0], (sd.distSx*100).toFixed(0), '#5fe3d8', '');
+  // Distanza dal pilastro a DX
+  qLabelLow([x1,0,0],[aDX,0,0], (sd.distDx*100).toFixed(0), '#5fe3d8', '');
+  // Etichette angoli SX/DX
+  var pSX=pr(aSX,0,0), pDX=pr(aDX,0,0);
+  c.font='700 9px Inter,sans-serif';c.fillStyle='#5fe3d8';c.textAlign='center';
+  c.fillText('SX', pSX[0], pSX[1]+24);
+  c.fillText('DX', pDX[0], pDX[1]+24);
 }
 
 function detCard(label, val, col) {
@@ -2022,8 +2061,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.19.1558 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.19.1558');
+  console.log('%c LayoutSync v2026.06.19.1945 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.19.1945');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
