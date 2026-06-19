@@ -233,7 +233,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.18.2206</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.19.1558</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -246,7 +246,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.18.2206</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.19.1558</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1602,9 +1602,9 @@ function handle3dTap(clientX, clientY) {
 // ═══ SCHEMI 3D ISOMETRICI QUOTATI ═══
 function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
   // Proiezione isometrica compatta
-  var sw=280, sh=170;
-  var ox=sw*0.46, oy=sh*0.50;
-  var SK=30; // scala ridotta (era 40)
+  var sw=400, sh=340;
+  var ox=sw*0.44, oy=sh*0.44;
+  var SK=60; // scala grande, etichette gradi incluse
   function iso(x, y, z) {
     var ax=Math.cos(Math.PI/6), ay=Math.sin(Math.PI/6);
     return [ox + (x-z)*ax*SK, oy - y*SK + (x+z)*ay*SK*0.6];
@@ -1614,7 +1614,7 @@ function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
   var eo = (d.offset/lungParete)*lw;
   var ewS = (ew/lungParete)*lw;
 
-  var svg = '<svg width="100%" viewBox="0 0 '+sw+' '+sh+'" style="display:block;max-height:170px;">';
+  var svg = '<svg width="100%" viewBox="0 0 '+sw+' '+sh+'" style="display:block;max-height:360px;">';
 
   // Pavimento
   var f1=iso(0,0,0), f2=iso(lw,0,0), f3=iso(lw,0,1), f4=iso(0,0,1);
@@ -1626,23 +1626,44 @@ function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
   if (d.tipo === 'pilastro') {
     var pr = d.profondita ? (d.profondita) : 0.30; // profondita reale o default
     var prS = pr; // gia in metri, scala con iso
+    // Larghezza minima visiva per leggibilita (il pilastro reale puo essere stretto)
+    var ewVis = Math.max(ewS, lw*0.12);
     var p_base = eo;
-    var b1=iso(p_base,0,0), b2=iso(p_base+ewS,0,0), b3=iso(p_base+ewS,0,prS), b4=iso(p_base,0,prS);
-    var t1=iso(p_base,2.7,0), t2=iso(p_base+ewS,2.7,0), t3=iso(p_base+ewS,2.7,prS), t4=iso(p_base,2.7,prS);
+    var b1=iso(p_base,0,0), b2=iso(p_base+ewVis,0,0), b3=iso(p_base+ewVis,0,prS), b4=iso(p_base,0,prS);
+    var t1=iso(p_base,2.7,0), t2=iso(p_base+ewVis,2.7,0), t3=iso(p_base+ewVis,2.7,prS), t4=iso(p_base,2.7,prS);
     svg += '<polygon points="'+b4[0]+','+b4[1]+' '+b3[0]+','+b3[1]+' '+t3[0]+','+t3[1]+' '+t4[0]+','+t4[1]+'" fill="'+col+'" opacity="0.5" stroke="'+col+'" stroke-width="1.5"/>';
     svg += '<polygon points="'+b2[0]+','+b2[1]+' '+b3[0]+','+b3[1]+' '+t3[0]+','+t3[1]+' '+t2[0]+','+t2[1]+'" fill="'+col+'" opacity="0.7" stroke="'+col+'" stroke-width="1.5"/>';
     svg += '<polygon points="'+t1[0]+','+t1[1]+' '+t2[0]+','+t2[1]+' '+t3[0]+','+t3[1]+' '+t4[0]+','+t4[1]+'" fill="'+col+'" opacity="0.9" stroke="'+col+'" stroke-width="1.5"/>';
     // Quote larghezza e profondita
     svg += quota(b1, b2, (ew*100).toFixed(0), col, 14);
     svg += quota(b2, b3, (pr*100).toFixed(0), '#f4c560', 10);
-    // Marca i 4 angoli del pilastro (spigoli verticali frontali) con pallini
-    var spigoli = [b1, b2, b3, b4];
+    // Marca i 4 angoli del pilastro con pallini E etichette dei gradi DENTRO l'immagine
+    // b1=ant.sx(base), b2=ant.dx, b3=post.dx, b4=post.sx -> uso i top per le etichette in alto
+    var spigoliB = [b1, b2, b3, b4];  // base (per pallini)
+    var spigoliT = [t1, t2, t3, t4];  // top (per etichette gradi, piu spazio)
     var angoliP = d.angoli || [90,90,90,90];
+    // Pallini sui 4 spigoli + etichette gradi distribuite: anteriori in BASSO, posteriori in ALTO
+    // ai: 0=ant.sx 1=ant.dx 2=post.dx 3=post.sx
+    var labelPos = [
+      {pt:b1, dy:26, anchor:'end',   dx:-8},   // ant.sx -> basso sinistra
+      {pt:b2, dy:26, anchor:'start', dx:8},    // ant.dx -> basso destra
+      {pt:t3, dy:-20, anchor:'start', dx:8},   // post.dx -> alto destra
+      {pt:t4, dy:-20, anchor:'end',   dx:-8}   // post.sx -> alto sinistra
+    ];
     for (var ai=0; ai<4; ai++) {
-      var sp = spigoli[ai];
-      var sc = Math.abs((angoliP[ai]||90)-90);
+      var av = angoliP[ai]||90;
+      var sc = Math.abs(av-90);
       var scol = sc<0.5?'#56d6a4':sc<1.5?'#f4c560':'#ef5d6b';
-      svg += '<circle cx="'+sp[0]+'" cy="'+sp[1]+'" r="3" fill="'+scol+'"/>';
+      // Pallini su base e top
+      svg += '<circle cx="'+spigoliB[ai][0]+'" cy="'+spigoliB[ai][1]+'" r="5" fill="'+scol+'" stroke="#0f1722" stroke-width="1"/>';
+      svg += '<circle cx="'+spigoliT[ai][0]+'" cy="'+spigoliT[ai][1]+'" r="4" fill="'+scol+'" stroke="#0f1722" stroke-width="1"/>';
+      // Etichetta
+      var lp = labelPos[ai];
+      var tx = lp.pt[0] + lp.dx, ty = lp.pt[1] + lp.dy;
+      var rectX = lp.anchor==='end' ? tx-46 : tx;
+      svg += '<line x1="'+lp.pt[0]+'" y1="'+lp.pt[1]+'" x2="'+tx+'" y2="'+ty+'" stroke="'+scol+'" stroke-width="0.8" opacity="0.6"/>';
+      svg += '<rect x="'+rectX+'" y="'+(ty-9)+'" width="46" height="17" rx="3" fill="rgba(15,23,34,0.92)" stroke="'+scol+'" stroke-width="1"/>';
+      svg += '<text x="'+(rectX+23)+'" y="'+(ty+3)+'" fill="'+scol+'" font-size="11" text-anchor="middle" font-family="monospace" font-weight="700">'+av.toFixed(1)+'\u00b0</text>';
     }
   } else {
     var a_base = eo;
@@ -1659,10 +1680,10 @@ function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
     }
   }
 
-  // Distanze dagli angoli
+  // Distanze dagli angoli (piu in basso per non sovrapporsi alle etichette gradi)
   var g0=iso(0,0,0), gE=iso(eo,0,0), gEnd=iso(lw,0,0), gElEnd=iso(eo+ewS,0,0);
-  svg += quota(g0, gE, (distSx*100).toFixed(0), '#5fe3d8', 30);
-  svg += quota(gElEnd, gEnd, (distDx*100).toFixed(0), '#5fe3d8', 30);
+  svg += quota(g0, gE, (distSx*100).toFixed(0), '#5fe3d8', 48);
+  svg += quota(gElEnd, gEnd, (distDx*100).toFixed(0), '#5fe3d8', 48);
 
   svg += '</svg>';
   return svg;
@@ -1671,11 +1692,36 @@ function schema3dElemento(d, W, L, col, distSx, distDx, lungParete) {
 // Helper: disegna una quota tra due punti con etichetta
 function quota(p1, p2, testo, col, off) {
   var mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
-  var s = '<line x1="'+p1[0]+'" y1="'+(p1[1]+off)+'" x2="'+p2[0]+'" y2="'+(p2[1]+off)+'" stroke="'+col+'" stroke-width="1"/>';
-  s += '<line x1="'+p1[0]+'" y1="'+(p1[1]+off-3)+'" x2="'+p1[0]+'" y2="'+(p1[1]+off+3)+'" stroke="'+col+'" stroke-width="1"/>';
-  s += '<line x1="'+p2[0]+'" y1="'+(p2[1]+off-3)+'" x2="'+p2[0]+'" y2="'+(p2[1]+off+3)+'" stroke="'+col+'" stroke-width="1"/>';
-  s += '<text x="'+mx+'" y="'+(my+off+(off>0?12:-4))+'" fill="'+col+'" font-size="10" text-anchor="middle" font-family="monospace" font-weight="600">'+testo+'</text>';
+  var s = '<line x1="'+p1[0]+'" y1="'+(p1[1]+off)+'" x2="'+p2[0]+'" y2="'+(p2[1]+off)+'" stroke="'+col+'" stroke-width="1.5"/>';
+  s += '<line x1="'+p1[0]+'" y1="'+(p1[1]+off-4)+'" x2="'+p1[0]+'" y2="'+(p1[1]+off+4)+'" stroke="'+col+'" stroke-width="1.5"/>';
+  s += '<line x1="'+p2[0]+'" y1="'+(p2[1]+off-4)+'" x2="'+p2[0]+'" y2="'+(p2[1]+off+4)+'" stroke="'+col+'" stroke-width="1.5"/>';
+  s += '<text x="'+mx+'" y="'+(my+off+(off>0?15:-6))+'" fill="'+col+'" font-size="13" text-anchor="middle" font-family="monospace" font-weight="700">'+testo+'</text>';
   return s;
+}
+
+function accordion(titolo, contenutoHtml, aperta) {
+  var id = 'acc_' + Math.random().toString(36).substr(2,6);
+  var h = '<div style="margin-bottom:8px;border:1px solid var(--brd);border-radius:8px;overflow:hidden;">';
+  h += '<div onclick="toggleAcc(this)" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--card);cursor:pointer;user-select:none;">';
+  h += '<span style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;">'+titolo+'</span>';
+  h += '<span class="acc-arrow" style="color:var(--acc);font-size:12px;transition:transform 0.2s;transform:rotate('+(aperta?'90':'0')+'deg);">\u25b6</span>';
+  h += '</div>';
+  h += '<div class="acc-body" style="max-height:'+(aperta?'600px':'0')+';overflow:hidden;transition:max-height 0.25s;padding:'+(aperta?'10px 13px 13px':'0 13px')+';">'+contenutoHtml+'</div>';
+  h += '</div>';
+  return h;
+}
+
+function toggleAcc(header) {
+  var body = header.nextElementSibling;
+  var arrow = header.querySelector('.acc-arrow');
+  var isOpen = body.style.maxHeight && body.style.maxHeight !== '0px';
+  if (isOpen) {
+    body.style.maxHeight = '0'; body.style.padding = '0 13px';
+    arrow.style.transform = 'rotate(0deg)';
+  } else {
+    body.style.maxHeight = '600px'; body.style.padding = '10px 13px 13px';
+    arrow.style.transform = 'rotate(90deg)';
+  }
 }
 
 function openDetail(zone) {
@@ -1706,73 +1752,83 @@ function openDetail(zone) {
     // Angoli del pilastro (reali o default 90)
     var angPil = d.angoli || [90,90,90,90];
 
-    // ═══ 1. SCHEMA 3D (prima informazione, compatto) ═══
-    html += '<div style="margin-bottom:16px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;">';
-    html += schema3dElemento(d, W, L, col, distSx, distDx, lungParete);
+    // ═══ 1. SCHEMA 3D RUOTABILE (canvas) ═══
+    html += '<div style="margin-bottom:16px;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:10px;position:relative;">';
+    html += '<canvas id="schemaCanvas" style="width:100%;height:300px;display:block;touch-action:none;cursor:grab;"></canvas>';
+    html += '<div style="position:absolute;top:14px;right:14px;font-size:9px;color:var(--t3);background:rgba(15,23,34,0.7);padding:3px 7px;border-radius:5px;">\u21bb ruota \u00b7 \u270b\u270b zoom</div>';
+    html += '<div style="position:absolute;bottom:24px;right:14px;display:flex;flex-direction:column;gap:5px;">';
+    html += '<button onclick="_schZoom=Math.min(4,_schZoom*1.25);drawSchema();" style="width:32px;height:32px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:7px;color:var(--acc);font-size:17px;font-weight:700;cursor:pointer;">+</button>';
+    html += '<button onclick="_schZoom=Math.max(0.4,_schZoom*0.8);drawSchema();" style="width:32px;height:32px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:7px;color:var(--acc);font-size:17px;font-weight:700;cursor:pointer;">\u2212</button>';
+    html += '</div>';
     html += '<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:2px;">misure in cm</div>';
     html += '</div>';
+    // Salva i dati per il render del canvas (eseguito dopo l'inserimento nel DOM)
+    window._schemaData = {d:d, W:W, L:L, col:col, distSx:distSx, distDx:distDx, lungParete:lungParete};
 
-    // ═══ 2. POSIZIONAMENTO ═══
-    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Posizionamento</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
-    html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
-    html += detCard('Da angolo '+nomiAng[0], (distSx*100).toFixed(0)+' cm', '#5fe3d8');
-    html += detCard('Da angolo '+nomiAng[1], (distDx*100).toFixed(0)+' cm', '#5fe3d8');
-    html += detCard('Lunghezza parete', (lungParete*100).toFixed(0)+' cm', col);
-    html += '</div>';
+    // ═══ 2. INFORMAZIONI IN TENDINE ═══
+    // Posizionamento
+    var posHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    posHtml += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
+    posHtml += detCard('Da angolo '+nomiAng[0], (distSx*100).toFixed(0)+' cm', '#5fe3d8');
+    posHtml += detCard('Da angolo '+nomiAng[1], (distDx*100).toFixed(0)+' cm', '#5fe3d8');
+    posHtml += detCard('Lunghezza parete', (lungParete*100).toFixed(0)+' cm', col);
+    posHtml += '</div>';
+    html += accordion('Posizionamento', posHtml, true);  // prima tendina aperta
 
-    // ═══ 3. DIMENSIONI ═══
-    html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Dimensioni</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+    // Dimensioni
+    var dimHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
     if (d.tipo === 'pilastro') {
-      html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
-      html += detCard('Profondita', (profPil*100).toFixed(0)+' cm', '#f4c560');
-      html += detCard('Altezza', '270 cm', col);
-      html += detCard('Ingombro pianta', (d.larghezza*profPil).toFixed(2)+' m\u00b2', col);
-      // Diagonali del pilastro (in pianta)
+      dimHtml += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
+      dimHtml += detCard('Profondita', (profPil*100).toFixed(0)+' cm', '#f4c560');
+      dimHtml += detCard('Altezza', '270 cm', col);
+      dimHtml += detCard('Ingombro pianta', (d.larghezza*profPil).toFixed(2)+' m\u00b2', col);
       var diagPil = Math.hypot(d.larghezza, profPil);
-      html += detCard('Diagonale pianta', (diagPil*100).toFixed(0)+' cm', '#8b7df6');
-      html += detCard('Perimetro', ((d.larghezza+profPil)*2*100).toFixed(0)+' cm', col);
+      dimHtml += detCard('Diagonale pianta', (diagPil*100).toFixed(0)+' cm', '#8b7df6');
+      dimHtml += detCard('Perimetro', ((d.larghezza+profPil)*2*100).toFixed(0)+' cm', col);
     } else {
-      html += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
-      html += detCard('Altezza', (altezzaEl*100).toFixed(0)+' cm', col);
+      dimHtml += detCard('Larghezza', (d.larghezza*100).toFixed(0)+' cm', col);
+      dimHtml += detCard('Altezza', (altezzaEl*100).toFixed(0)+' cm', col);
       var diagAp = Math.hypot(d.larghezza, altezzaEl);
-      html += detCard('Diagonale', (diagAp*100).toFixed(0)+' cm', '#8b7df6');
+      dimHtml += detCard('Diagonale', (diagAp*100).toFixed(0)+' cm', '#8b7df6');
       if (d.tipo === 'finestra') {
-        html += detCard('Davanzale', (d.h0*100).toFixed(0)+' cm', col);
-        html += detCard('Architrave', (d.h1*100).toFixed(0)+' cm', col);
+        dimHtml += detCard('Davanzale', (d.h0*100).toFixed(0)+' cm', col);
+        dimHtml += detCard('Architrave', (d.h1*100).toFixed(0)+' cm', col);
       }
       if (d.tipo === 'porta') {
-        html += detCard('Luce passaggio', (d.larghezza*100).toFixed(0)+' cm', col);
-        html += detCard('Altezza luce', (altezzaEl*100).toFixed(0)+' cm', col);
+        dimHtml += detCard('Luce passaggio', (d.larghezza*100).toFixed(0)+' cm', col);
+        dimHtml += detCard('Altezza luce', (altezzaEl*100).toFixed(0)+' cm', col);
       }
     }
-    html += '</div>';
+    dimHtml += '</div>';
+    html += accordion('Dimensioni', dimHtml, false);
 
-    // ═══ 4. FUORI SQUADRO ANGOLI (solo pilastri) ═══
+    // Squadro angoli (solo pilastri)
     if (d.tipo === 'pilastro') {
-      html += '<div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Squadro angoli pilastro</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+      var sqHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
       var nomiAngPil = ['Ant. SX','Ant. DX','Post. DX','Post. SX'];
       for (var pai=0; pai<4; pai++) {
         var av = angPil[pai] || 90;
         var sc = Math.abs(av-90);
         var acol = sc<0.5?'#56d6a4':sc<1.5?'#f4c560':'#ef5d6b';
-        html += detCard(nomiAngPil[pai], av.toFixed(1)+'\u00b0', acol);
+        sqHtml += detCard(nomiAngPil[pai], av.toFixed(1)+'\u00b0', acol);
       }
-      html += '</div>';
+      sqHtml += '</div>';
+      html += accordion('Squadro angoli pilastro', sqHtml, false);
     }
 
-        // Fuori squadro della parete dell'elemento
+        // Fuori squadro della parete dell'elemento (in tendina)
     var fs = window._realFuoriSquadro || {};
     if (fs[d.parete] !== undefined) {
       var fsv = fs[d.parete];
       var fscol = fsv<0.5?'#56d6a4':fsv<1.5?'#f4c560':'#ef5d6b';
-      html += '<div style="margin-top:12px;padding:12px;background:var(--card);border:1px solid var(--brd);border-left:3px solid '+fscol+';border-radius:8px;">';
-      html += '<div style="font-size:11px;color:var(--t2);margin-bottom:3px;">Fuori squadro parete '+d.parete+'</div>';
-      html += '<div style="font-family:var(--mono);font-size:16px;font-weight:600;color:'+fscol+';">'+fsv.toFixed(1)+'\u00b0 \u00b7 '+(Math.tan(fsv*Math.PI/180)*H*1000).toFixed(0)+'mm su '+H.toFixed(2)+'m</div></div>';
+      var fsHtml = '<div style="padding:10px;background:var(--surface-2);border-left:3px solid '+fscol+';border-radius:6px;">';
+      fsHtml += '<div style="font-family:var(--mono);font-size:16px;font-weight:600;color:'+fscol+';">'+fsv.toFixed(1)+'\u00b0</div>';
+      fsHtml += '<div style="font-size:11px;color:var(--t2);margin-top:3px;">scarto '+(Math.tan(fsv*Math.PI/180)*H*1000).toFixed(0)+'mm su '+H.toFixed(2)+'m di altezza</div></div>';
+      html += accordion('Fuori squadro parete '+d.parete, fsHtml, false);
     }
-  } else if (zone.tipo === 'angolo') {
+
+    } else if (zone.tipo === 'angolo') {
+    window._schemaData = null;  // gli angoli non hanno schema ruotabile
     var d = zone.data;
     var col = d.scarto<0.5?'#56d6a4':d.scarto<1.5?'#f4c560':'#ef5d6b';
     var stato = d.scarto<0.5?'A squadro':d.scarto<1.5?'Lieve deviazione':'Fuori squadro';
@@ -1796,6 +1852,131 @@ function openDetail(zone) {
   document.getElementById('detail').style.opacity = '1';
   document.getElementById('detail').style.pointerEvents = 'all';
   document.getElementById('detail-sheet').style.transform = 'translateY(0)';
+  // Inizializza il canvas ruotabile se c'e' uno schema (elementi, non angoli)
+  if (window._schemaData) {
+    setTimeout(initSchemaCanvas, 120);
+  }
+}
+
+// ═══ SCHEMA 3D RUOTABILE SU CANVAS ═══
+var _schRx=0.5, _schRy=0.6, _schZoom=1, _schDrag=false, _schLx=0, _schLy=0, _schPinch=0;
+
+function initSchemaCanvas() {
+  var cv = document.getElementById('schemaCanvas');
+  if (!cv || !window._schemaData) return;
+  // reset vista a una 3/4 piacevole
+  _schRx=0.5; _schRy=0.6; _schZoom=1; _schPinch=0;
+  var dpr = Math.min(window.devicePixelRatio||1, 2);
+  var r = cv.getBoundingClientRect();
+  cv.width = Math.round(r.width*dpr);
+  cv.height = Math.round(r.height*dpr);
+  cv._css = {w:r.width, h:r.height, dpr:dpr};
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawSchema();
+  // Gestori drag (mouse + touch)
+  cv.onmousedown = function(e){_schDrag=true;_schLx=e.clientX;_schLy=e.clientY;cv.style.cursor='grabbing';};
+  cv.onmousemove = function(e){if(!_schDrag)return;_schRy+=(e.clientX-_schLx)*0.01;_schRx+=(e.clientY-_schLy)*0.01;_schRx=Math.max(-1.4,Math.min(1.4,_schRx));_schLx=e.clientX;_schLy=e.clientY;drawSchema();};
+  cv.onmouseup = function(){_schDrag=false;cv.style.cursor='grab';};
+  cv.onmouseleave = function(){_schDrag=false;cv.style.cursor='grab';};
+  cv.addEventListener('touchstart',function(e){e.preventDefault();if(e.touches.length===1){_schDrag=true;_schLx=e.touches[0].clientX;_schLy=e.touches[0].clientY;}else if(e.touches.length===2){_schDrag=false;_schPinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:false});
+  cv.addEventListener('touchmove',function(e){e.preventDefault();if(_schDrag&&e.touches.length===1){_schRy+=(e.touches[0].clientX-_schLx)*0.01;_schRx+=(e.touches[0].clientY-_schLy)*0.01;_schRx=Math.max(-1.4,Math.min(1.4,_schRx));_schLx=e.touches[0].clientX;_schLy=e.touches[0].clientY;drawSchema();}else if(e.touches.length===2){var dd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(_schPinch>0){_schZoom*=(dd/_schPinch);_schZoom=Math.max(0.4,Math.min(4,_schZoom));}_schPinch=dd;drawSchema();}},{passive:false});
+  cv.addEventListener('touchend',function(){_schDrag=false;_schPinch=0;});
+  cv.addEventListener('wheel',function(e){e.preventDefault();_schZoom*=e.deltaY>0?0.88:1.14;_schZoom=Math.max(0.4,Math.min(4,_schZoom));drawSchema();},{passive:false});
+}
+
+function drawSchema() {
+  var cv = document.getElementById('schemaCanvas');
+  if (!cv || !window._schemaData) return;
+  var css = cv._css || {w:cv.width, h:cv.height};
+  var c = cv.getContext('2d');
+  c.clearRect(0,0,css.w,css.h);
+  var sd = window._schemaData;
+  var d = sd.d, col = sd.col;
+  var lung = Math.min(sd.lungParete, 4);
+  var ew = Math.max(d.larghezza, lung*0.10);
+  var eo = (d.offset/sd.lungParete)*lung;
+  var prof = d.profondita || 0.30;
+  var Hh = 2.7;
+  var cx = css.w/2, cy = css.h*0.55;
+  var SK = 42 * _schZoom;
+
+  // Proiezione 3D con rotazione libera
+  function pr(x,y,z){
+    // centra sul pilastro
+    var tx=x-(eo+ew/2), ty=y-Hh/2, tz=z-prof/2;
+    var rx=tx*Math.cos(_schRy)-tz*Math.sin(_schRy);
+    var rz=tx*Math.sin(_schRy)+tz*Math.cos(_schRy);
+    var ry2=ty*Math.cos(_schRx)-rz*Math.sin(_schRx);
+    var rz2=ty*Math.sin(_schRx)+rz*Math.cos(_schRx);
+    return [cx+rx*SK, cy-ry2*SK];
+  }
+  function poly(pts, fill, alpha, stroke, lw){
+    c.beginPath();
+    var p0=pr(pts[0][0],pts[0][1],pts[0][2]);
+    c.moveTo(p0[0],p0[1]);
+    for(var i=1;i<pts.length;i++){var p=pr(pts[i][0],pts[i][1],pts[i][2]);c.lineTo(p[0],p[1]);}
+    c.closePath();
+    if(fill){c.fillStyle=fill;c.globalAlpha=alpha||1;c.fill();c.globalAlpha=1;}
+    if(stroke){c.strokeStyle=stroke;c.lineWidth=lw||1.5;c.stroke();}
+  }
+  function line3(a,b,stroke,lw){var p1=pr(a[0],a[1],a[2]),p2=pr(b[0],b[1],b[2]);c.beginPath();c.strokeStyle=stroke;c.lineWidth=lw||1.5;c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();}
+
+  // Pavimento riferimento
+  poly([[eo-0.6,0,-0.4],[eo+ew+0.6,0,-0.4],[eo+ew+0.6,0,prof+0.4],[eo-0.6,0,prof+0.4]], '#1a2535',1,'#2a3a52',1);
+  // Parete (piano z=0)
+  poly([[eo-0.8,0,0],[eo+ew+0.8,0,0],[eo+ew+0.8,Hh,0],[eo-0.8,Hh,0]], '#172131',1,'#39507a',1.5);
+
+  // Pilastro: 8 vertici
+  var x0=eo, x1=eo+ew, z0=0, z1=prof;
+  var V={
+    b1:[x0,0,z0], b2:[x1,0,z0], b3:[x1,0,z1], b4:[x0,0,z1],
+    t1:[x0,Hh,z0], t2:[x1,Hh,z0], t3:[x1,Hh,z1], t4:[x0,Hh,z1]
+  };
+  // Facce (ordine per profondita semplice)
+  poly([V.b4,V.b3,V.t3,V.t4], col, 0.45, col, 1.2); // retro
+  poly([V.b1,V.b4,V.t4,V.t1], col, 0.55, col, 1.2); // lato sx
+  poly([V.b2,V.b3,V.t3,V.t2], col, 0.55, col, 1.2); // lato dx
+  poly([V.b1,V.b2,V.t2,V.t1], col, 0.7, col, 1.5);  // fronte
+  poly([V.t1,V.t2,V.t3,V.t4], col, 0.85, col, 1.5); // top
+
+  // Etichette gradi sui 4 spigoli verticali
+  var ang = d.angoli || [90,90,90,90];
+  var spig = [V.b1, V.b2, V.b3, V.b4];
+  var spigT = [V.t1, V.t2, V.t3, V.t4];
+  for(var i=0;i<4;i++){
+    var av=ang[i]||90, sc=Math.abs(av-90);
+    var scol=sc<0.5?'#56d6a4':sc<1.5?'#f4c560':'#ef5d6b';
+    var pb=pr(spig[i][0],spig[i][1],spig[i][2]);
+    var pt=pr(spigT[i][0],spigT[i][1],spigT[i][2]);
+    // spigolo verticale evidenziato
+    c.beginPath();c.strokeStyle=scol;c.lineWidth=2;c.moveTo(pb[0],pb[1]);c.lineTo(pt[0],pt[1]);c.stroke();
+    // pallini
+    c.beginPath();c.fillStyle=scol;c.arc(pb[0],pb[1],4,0,Math.PI*2);c.fill();
+    c.beginPath();c.fillStyle=scol;c.arc(pt[0],pt[1],4,0,Math.PI*2);c.fill();
+    // etichetta gradi a meta spigolo
+    var mx=(pb[0]+pt[0])/2, my=(pb[1]+pt[1])/2;
+    c.font='700 11px JetBrains Mono,monospace';
+    var txt=av.toFixed(1)+'\u00b0';
+    var tw=c.measureText(txt).width+8;
+    c.fillStyle='rgba(15,23,34,0.92)';
+    c.fillRect(mx-tw/2,my-8,tw,16);
+    c.strokeStyle=scol;c.lineWidth=0.8;c.strokeRect(mx-tw/2,my-8,tw,16);
+    c.fillStyle=scol;c.textAlign='center';c.textBaseline='middle';
+    c.fillText(txt,mx,my);
+  }
+
+  // Quote larghezza e profondita (sul fronte basso)
+  c.textBaseline='alphabetic';
+  function qLabel(a,b,testo,qcol){
+    var p1=pr(a[0],a[1],a[2]),p2=pr(b[0],b[1],b[2]);
+    var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;
+    c.beginPath();c.strokeStyle=qcol;c.lineWidth=1.2;c.moveTo(p1[0],p1[1]);c.lineTo(p2[0],p2[1]);c.stroke();
+    c.font='700 11px JetBrains Mono,monospace';c.fillStyle=qcol;c.textAlign='center';
+    c.fillText(testo, mx, my+14);
+  }
+  qLabel([x0,0,z1],[x1,0,z1], (d.larghezza*100).toFixed(0), col);
+  qLabel([x1,0,z0],[x1,0,z1], (prof*100).toFixed(0), '#f4c560');
 }
 
 function detCard(label, val, col) {
@@ -1841,8 +2022,8 @@ function toast(msg){
 
 // ═══ INIT ═══
 window.addEventListener('load',function(){
-  console.log('%c LayoutSync v2026.06.18.2206 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.18.2206');
+  console.log('%c LayoutSync v2026.06.19.1558 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.06.19.1558');
   document.getElementById('cfgurl').value=SERVER;
   checkServer();
   setInterval(checkServer,20000);
