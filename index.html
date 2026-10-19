@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2225</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2230</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2225</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2230</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -509,6 +509,7 @@ var curWall = 'NORD';
 var WALLS4 = ['NORD','SUD','EST','OVEST'];
 var cv, ctx2d;
 var _rx=0.42, _ry=0.55, _zoom=1.0, _d3=false, _lx3=0, _ly3=0, _p3=0;
+var _panX=0, _panY=0;   // spostamento (pan) in pixel, usato in vista pianta
 var _3W=3.85, _3L=4.20, _3H=2.70;
 var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
 
@@ -1551,7 +1552,10 @@ function init3d() {
   }, 50);
   var c3 = document.getElementById('c3');
   c3.onmousedown = function(e){_d3=true;_lx3=e.clientX;_ly3=e.clientY;};
-  c3.onmousemove = function(e){if(!_d3) return;_ry+=(e.clientX-_lx3)*0.009;_rx+=(e.clientY-_ly3)*0.009;_lx3=e.clientX;_ly3=e.clientY;reqDraw3d();};
+  c3.onmousemove = function(e){if(!_d3) return;
+    if(_vistaCorrente==='top'){ _panX+=(e.clientX-_lx3); _panY+=(e.clientY-_ly3); }  // pianta: trascina (pan), niente rotazione
+    else { _ry+=(e.clientX-_lx3)*0.009; _rx+=(e.clientY-_ly3)*0.009; }
+    _lx3=e.clientX;_ly3=e.clientY;reqDraw3d();};
   c3.onmouseup = function(){_d3=false;};
   c3.onwheel = function(e){e.preventDefault();_zoom*=e.deltaY>0?0.85:1.18;_zoom=Math.max(0.3,Math.min(10,_zoom));reqDraw3d();};
   c3.addEventListener('touchstart',function(e){
@@ -1563,7 +1567,10 @@ function init3d() {
   c3.addEventListener('touchmove',function(e){
     if(e.target!==c3) return;
     e.preventDefault();
-    if(e.touches.length===1&&_d3){_ry+=(e.touches[0].clientX-_lx3)*0.009;_rx+=(e.touches[0].clientY-_ly3)*0.009;_lx3=e.touches[0].clientX;_ly3=e.touches[0].clientY;reqDraw3d();}
+    if(e.touches.length===1&&_d3){
+      if(_vistaCorrente==='top'){ _panX+=(e.touches[0].clientX-_lx3); _panY+=(e.touches[0].clientY-_ly3); }  // pianta: pan
+      else { _ry+=(e.touches[0].clientX-_lx3)*0.009; _rx+=(e.touches[0].clientY-_ly3)*0.009; }
+      _lx3=e.touches[0].clientX;_ly3=e.touches[0].clientY;reqDraw3d();}
     if(e.touches.length===2){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(_p3>0){_zoom*=(d/_p3);_zoom=Math.max(0.3,Math.min(10,_zoom));}_p3=d;reqDraw3d();}
   },{passive:false});
   c3.addEventListener('touchend',function(e){if(e.target===c3)_d3=false;});
@@ -1651,6 +1658,7 @@ function setV3(v, btn) {
   document.querySelectorAll('.v3btn').forEach(function(b){b.classList.remove('on');});
   if(btn) btn.classList.add('on');
   _vistaCorrente = v;
+  _panX=0; _panY=0;   // azzera lo spostamento a ogni cambio vista
   if(v==='3d'){_rx=0.42;_ry=0.55;_zoom=1.0;}
   if(v==='top'){ _fitPianta(); if(!window._c3css){ setTimeout(function(){_fitPianta();draw3d();},120); } }   // raddrizza + riempie lo schermo
   if(v==='nord'){_rx=0;_ry=Math.PI;_zoom=1.2;}
@@ -1834,7 +1842,7 @@ function pr3d(x,y,z){
   var css=window._c3css||{w:document.getElementById('c3').width,h:document.getElementById('c3').height};
   // _zoom moltiplica la scala finale -> zoom diretto ed evidente
   var s=52*_zoom;
-  return[css.w/2+rx*dd*s,css.h/2-ry2*dd*s];
+  return[css.w/2+rx*dd*s+(_panX||0),css.h/2-ry2*dd*s+(_panY||0)];
 }
 
 // Calcola i 4 vertici reali del pavimento dagli angoli interni misurati.
@@ -2674,8 +2682,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.2225 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.2225');
+  console.log('%c LayoutSync v2026.10.19.2230 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.2230');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
