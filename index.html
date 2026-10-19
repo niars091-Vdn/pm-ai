@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2140</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2205</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2140</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2205</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -272,16 +272,11 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
       <div class="wt">Layout<em>Sync</em></div>
       <p class="ws">Trasforma una stanza in un disegno CAD in meno di 10 minuti</p>
     </div>
-    <div class="wsteps">
-      <div class="wst"><div class="wn">1</div><div class="wb"><strong>Disegna la pianta</strong><span>Traccia le pareti a dito con snap automatico.</span></div></div>
-      <div class="wst"><div class="wn">2</div><div class="wb"><strong>Fotografa le pareti</strong><span>Una foto per parete — AI analizza tutto.</span></div></div>
-      <div class="wst"><div class="wn">3</div><div class="wb"><strong>Verifica le misure</strong><span>Solo le misure critiche. Il sistema gestisce il resto.</span></div></div>
-      <div class="wst"><div class="wn">4</div><div class="wb"><strong>Scarica il CAD</strong><span>DXF, alzati, sezione e PDF in 30 secondi.</span></div></div>
-    </div>
     <div class="wbot">
-      <button class="btn p" style="width:100%;margin-bottom:10px" onclick="goScreen('sd')">📐 Inizia rilievo completo</button>
-      <button class="btn g" style="width:100%;margin-bottom:10px" onclick="goScreen('si')">📂 Importa file .ply o .dxf</button>
-      <button class="btn g" style="width:100%" onclick="apriEditorManuale()">✏️ Inserisci pareti a mano</button>
+      <button class="btn p" style="width:100%;margin-bottom:10px" onclick="apriImport('dxf')">📐 Importa file DXF</button>
+      <button class="btn g" style="width:100%;margin-bottom:10px" onclick="apriImport('ply')">🧱 Importa file PLY</button>
+      <button class="btn g" style="width:100%;margin-bottom:10px" onclick="goScreen('sd')">✏️ Inizia rilievo a mano</button>
+      <button class="btn g" style="width:100%" onclick="apriEditorManuale()">📝 Inserisci pareti a mano</button>
     </div>
   </div>
 </div>
@@ -492,7 +487,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
 
 <!-- CONFIG -->
 <div id="cfg" onclick="cfgOut(event)">
-  <div id="cfgs"><div class="cfgh"></div><h3>⚙️ Server LayoutSync</h3><input class="cfgi" id="cfgurl" type="url" placeholder="https://web-production-31a58.up.railway.app"><button class="btn p" style="width:100%" onclick="saveCfg()">Salva e verifica connessione</button></div>
+  <div id="cfgs"><div class="cfgh"></div><h3>⚙️ Server LayoutSync</h3><input class="cfgi" id="cfgurl" type="url" placeholder="https://layoutsync-backend.onrender.com"><button class="btn p" style="width:100%" onclick="saveCfg()">Salva e verifica connessione</button></div>
 </div>
 <!-- PANNELLO DETTAGLIO PARTICOLARE -->
 <div id="detail" onclick="detailOut(event)" style="position:fixed;inset:0;z-index:350;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.2s;display:flex;align-items:flex-end;">
@@ -506,7 +501,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
 <script>
 
 // ═══ STATO ═══
-var SERVER = localStorage.getItem('ls_srv') || '';
+var SERVER = localStorage.getItem('ls_srv') || 'https://layoutsync-backend.onrender.com';
 var curTool = 'wall';
 var skWalls = [], skPts = [], skEls = [], skDraw = false, skStart = null, skClosed = false, skSnapAng = null;
 var photos = {}, measures = {}, zipBlob = null, plyFile = null, stream = null;
@@ -838,6 +833,28 @@ function scatta() {
   if (idx < WALLS4.length-1) selWall(WALLS4[idx+1]);
   document.getElementById('camnext').disabled = false;
   toast('📸 Parete '+curWall+' acquisita');
+}
+
+// ═══ IMPORT: apre la schermata import filtrando per tipo e lancia il selettore ═══
+function apriImport(tipo) {
+  goScreen('si');
+  var inp = document.getElementById('plyinp');
+  var izt = document.getElementById('izt');
+  var izs = document.getElementById('izs');
+  var guide = document.getElementById('importGuide');
+  if (tipo === 'dxf') {
+    inp.accept = '.dxf';
+    if (izt) izt.textContent = 'Seleziona file .dxf';
+    if (izs) izs.textContent = 'Pianta .dxf da CAD / architetto / TheMeter';
+    if (guide) guide.style.display = 'none';   // la guida Scaniverse non serve per DXF
+  } else {
+    inp.accept = '.ply,.npy';
+    if (izt) izt.textContent = 'Seleziona file .ply';
+    if (izs) izs.textContent = 'Scansione .ply / .npy da Scaniverse';
+    if (guide) guide.style.display = '';
+  }
+  // Apri direttamente il selettore file del telefono
+  setTimeout(function(){ inp.click(); }, 150);
 }
 
 // ═══ IMPORT PLY ═══
@@ -2571,7 +2588,8 @@ function closeDetail() {
 function checkServer() {
   var dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
   if (!SERVER) { dot.className='dot off'; txt.textContent='non conf.'; return; }
-  fetch(SERVER+'/status',{signal:AbortSignal.timeout(4000)}).then(function(r){
+  txt.textContent='verifico...';
+  fetch(SERVER+'/status',{signal:AbortSignal.timeout(60000)}).then(function(r){
     if(r.ok){dot.className='dot on';txt.textContent='online';}else throw new Error();
   }).catch(function(){dot.className='dot off';txt.textContent='offline';});
 }
@@ -2596,8 +2614,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.2140 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.2140');
+  console.log('%c LayoutSync v2026.10.19.2205 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.2205');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
