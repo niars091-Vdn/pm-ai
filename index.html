@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.06.19.2230</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1515</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.06.19.2230</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1515</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -280,7 +280,8 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     </div>
     <div class="wbot">
       <button class="btn p" style="width:100%;margin-bottom:10px" onclick="goScreen('sd')">📐 Inizia rilievo completo</button>
-      <button class="btn g" style="width:100%" onclick="goScreen('si')">📂 Importa file .ply da Scaniverse</button>
+      <button class="btn g" style="width:100%;margin-bottom:10px" onclick="goScreen('si')">📂 Importa file .ply o .dxf</button>
+      <button class="btn g" style="width:100%" onclick="apriEditorManuale()">✏️ Inserisci pareti a mano</button>
     </div>
   </div>
 </div>
@@ -344,6 +345,49 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     </div>
   </div>
   <div class="bot"><button class="btn g" onclick="goScreen('sw')">← Indietro</button><button class="btn p" id="btnanalyze" onclick="startAnalysis()" disabled>Analizza →</button></div>
+</div>
+
+<!-- EDITOR MANUALE PARETI -->
+<div class="scr" id="sedit">
+  <div class="ih"><h2>✏️ Inserisci pareti</h2><p>Aggiungi le pareti una per una: lunghezza e angolo di rotazione. La forma si costruisce in tempo reale.</p></div>
+  <div class="ib" style="padding:0 16px;">
+    <canvas id="editCanvas" style="width:100%;height:240px;display:block;background:var(--card);border:1px solid var(--brd);border-radius:10px;margin-bottom:12px;touch-action:none;"></canvas>
+    <div id="editList" style="margin-bottom:12px;"></div>
+    <div style="background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Aggiungi parete</div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Lunghezza parete (cm)</label>
+        <input type="number" id="editLen" value="200" style="width:100%;padding:11px;background:var(--surface-2);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-size:16px;">
+      </div>
+      <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:6px;">In che direzione va questa parete?</label>
+      <div id="editDirGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">
+        <button class="dirbtn" data-dir="90"  onclick="scegliDir(this,90)"  style="padding:12px 0;background:var(--surface-2);border:1px solid var(--brd);border-radius:8px;color:var(--txt);font-size:18px;cursor:pointer;">↑</button>
+        <button class="dirbtn" data-dir="270" onclick="scegliDir(this,270)" style="padding:12px 0;background:var(--surface-2);border:1px solid var(--brd);border-radius:8px;color:var(--txt);font-size:18px;cursor:pointer;">↓</button>
+        <button class="dirbtn" data-dir="0"   onclick="scegliDir(this,0)"   style="padding:12px 0;background:var(--surface-2);border:1px solid var(--brd);border-radius:8px;color:var(--txt);font-size:18px;cursor:pointer;">→</button>
+        <button class="dirbtn" data-dir="180" onclick="scegliDir(this,180)" style="padding:12px 0;background:var(--surface-2);border:1px solid var(--brd);border-radius:8px;color:var(--txt);font-size:18px;cursor:pointer;">←</button>
+      </div>
+      <details id="editAngDetails" style="margin-bottom:8px;">
+        <summary style="font-size:11px;color:var(--acc);cursor:pointer;">⊕ angolo reale (fuori squadro)</summary>
+        <div style="margin-top:8px;padding:10px;background:rgba(95,227,216,0.05);border-radius:7px;">
+          <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:4px;">Angolo con la parete precedente (gradi)</label>
+          <input type="number" id="editAngReale" placeholder="90 = squadrato · 91 = aperto · 89 = chiuso" step="0.1" style="width:100%;padding:9px;background:var(--surface-2);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-size:14px;" oninput="applicaAngoloReale(this.value)">
+          <div style="font-size:10px;color:var(--t3);margin-top:5px;">Lascia vuoto per angolo retto (90°). Scrivi il valore misurato (es. 91.04) per il fuori squadro reale.</div>
+        </div>
+      </details>
+      <button class="btn p" style="width:100%;margin-top:4px;" onclick="aggiungiParete()">+ Aggiungi parete</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn g" style="flex:1;" onclick="annullaUltimaParete()">↶ Annulla ultima</button>
+      <button class="btn g" style="flex:1;" onclick="chiudiPerimetro()">⬚ Chiudi perimetro</button>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);margin-bottom:12px;">
+      <input type="number" id="editH" value="270" style="width:80px;padding:7px;background:var(--surface-2);border:1px solid var(--brd);border-radius:7px;color:var(--txt);"> Altezza pareti (cm)
+    </label>
+  </div>
+  <div class="bot">
+    <button class="btn g" onclick="goScreen('sw')">← Indietro</button>
+    <button class="btn p" id="btnEditDone" onclick="confermaEditor()" disabled>Genera stanza →</button>
+  </div>
 </div>
 
 <!-- PREVIEW SCAN -->
@@ -2182,8 +2226,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.06.19.2230 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.06.19.2230');
+  console.log('%c LayoutSync v2026.10.19.1515 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.1515');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
@@ -2203,6 +2247,250 @@ setTimeout(function(){
   var s=document.getElementById('splash');
   if(s && !s.classList.contains('out')){ s.classList.add('out'); setTimeout(function(){if(s)s.remove();},600); }
 }, 3000);
+
+
+// ═══════════════════════════════════════
+// EDITOR MANUALE PARETI
+// ═══════════════════════════════════════
+var _pareti = [];  // {len_cm, dir_deg}  -- dir_deg = direzione ASSOLUTA bussola (0=→,90=↑,180=←,270=↓)
+var _dirScelta = 0;  // direzione attualmente selezionata
+
+function apriEditorManuale() {
+  _pareti = [];
+  _dirScelta = 0;
+  _angoloReale = null;
+  goScreen('sedit');
+  setTimeout(function(){
+    initEditCanvas();
+    // Pre-seleziona "destra" come default
+    var primoBtn = document.querySelector('.dirbtn[data-dir="0"]');
+    if (primoBtn) scegliDir(primoBtn, 0);
+    renderEditor();
+  }, 120);
+}
+
+function scegliDir(btn, dir) {
+  _dirScelta = dir;
+  // Evidenzia il bottone scelto, deseleziona gli altri
+  document.querySelectorAll('.dirbtn').forEach(function(b){
+    b.style.borderColor = 'var(--brd)';
+    b.style.background = 'var(--surface-2)';
+    b.style.color = 'var(--txt)';
+  });
+  if (btn) {
+    btn.style.borderColor = 'var(--acc)';
+    btn.style.background = 'rgba(95,227,216,0.15)';
+    btn.style.color = 'var(--acc)';
+  }
+}
+
+var _angoloReale = null;  // angolo interno misurato con la parete precedente (null = 90° retto)
+
+function applicaAngoloReale(val) {
+  if (val === '' || val === null) { _angoloReale = null; return; }
+  var a = parseFloat(val);
+  if (isNaN(a)) { _angoloReale = null; return; }
+  _angoloReale = a;
+}
+
+function aggiungiParete() {
+  var len = parseFloat(document.getElementById('editLen').value);
+  if (!len || len <= 0) { toast('Inserisci una lunghezza valida'); return; }
+  var dir = _dirScelta;
+  // Se è stato inserito un angolo reale e c'è una parete precedente,
+  // correggi la direzione in base allo scostamento da 90°.
+  if (_angoloReale !== null && _pareti.length > 0) {
+    var dirPrec = _pareti[_pareti.length-1].dir_deg;
+    // La freccia scelta indica il verso del giro (orario/antiorario) rispetto alla precedente.
+    // Giro ideale a 90°: differenza tra dir scelta e dir precedente.
+    var giroIdeale = _dirScelta - dirPrec;
+    // Normalizza in [-180,180]
+    while (giroIdeale > 180) giroIdeale -= 360;
+    while (giroIdeale < -180) giroIdeale += 360;
+    var versoGiro = giroIdeale >= 0 ? 1 : -1;  // sinistra(+) o destra(-)
+    // Angolo interno reale: 90 = retto. Lo scostamento sposta la direzione.
+    // Interno > 90 (aperto) => la parete gira MENO; interno < 90 (chiuso) => gira di PIU'
+    var giroReale = versoGiro * (180 - _angoloReale);
+    dir = dirPrec + giroReale;
+    dir = ((dir % 360) + 360) % 360;
+  }
+  _pareti.push({len_cm: len, dir_deg: dir, ang_reale: _angoloReale});
+  // Reset campo angolo reale per la prossima parete
+  var campoAng = document.getElementById('editAngReale');
+  if (campoAng) campoAng.value = '';
+  _angoloReale = null;
+  var det = document.getElementById('editAngDetails');
+  if (det) det.open = false;
+  renderEditor();
+  toast('Parete ' + _pareti.length + ' aggiunta');
+}
+
+function annullaUltimaParete() {
+  if (_pareti.length > 0) {
+    _pareti.pop();
+    renderEditor();
+  }
+}
+
+function chiudiPerimetro() {
+  // Aggiunge una parete che torna al punto di partenza (chiusura automatica)
+  if (_pareti.length < 2) { toast('Servono almeno 2 pareti'); return; }
+  var v = calcolaVerticiEditor();
+  var primo = v[0];
+  var ultimo = v[v.length-1];
+  var dx = primo.x - ultimo.x, dy = primo.y - ultimo.y;
+  var dist = Math.hypot(dx, dy);
+  if (dist < 0.01) { toast('Perimetro gia chiuso'); return; }
+  // Direzione dalla fine verso il punto di partenza
+  var dir = Math.atan2(dy, dx) * 180/Math.PI;
+  _pareti.push({len_cm: dist*100, dir_deg: ((dir%360)+360)%360, chiusura: true});
+  renderEditor();
+  toast('Perimetro chiuso');
+}
+
+function calcolaVerticiEditor() {
+  // Cammina lungo le pareti usando direzioni ASSOLUTE (bussola)
+  var v = [{x:0, y:0}];
+  var x=0, y=0;
+  for (var i=0; i<_pareti.length; i++) {
+    var p = _pareti[i];
+    var L = p.len_cm / 100;  // cm -> m
+    x += L * Math.cos(p.dir_deg * Math.PI/180);
+    y += L * Math.sin(p.dir_deg * Math.PI/180);
+    v.push({x:x, y:y});
+  }
+  return v;
+}
+
+function renderEditor() {
+  // Lista pareti
+  var lista = document.getElementById('editList');
+  if (_pareti.length === 0) {
+    lista.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:13px;padding:16px;">Nessuna parete. Aggiungine una qui sotto.</div>';
+  } else {
+    var h = '<div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Pareti (' + _pareti.length + ')</div>';
+    _pareti.forEach(function(p, i){
+      var d = p.dir_deg;
+      var freccia = (d<45||d>=315)?'\u2192 destra':(d<135)?'\u2191 su':(d<225)?'\u2190 sinistra':'\u2193 gi\u00f9';
+      if (d%90 !== 0) freccia = d.toFixed(0)+'\u00b0';
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;margin-bottom:5px;background:var(--surface-2);border:1px solid var(--brd);border-radius:7px;">';
+      h += '<div style="font-size:13px;color:var(--txt);"><strong>P' + (i+1) + '</strong> \u00b7 ' + Math.round(p.len_cm) + ' cm' + (p.chiusura ? ' <span style="color:var(--acc);font-size:11px;">(chiusura)</span>' : '') + '</div>';
+      h += '<div style="font-size:12px;color:var(--acc);font-weight:600;">' + freccia + '</div></div>';
+    });
+    lista.innerHTML = h;
+  }
+  // Abilita "Genera" se ci sono almeno 2 pareti
+  document.getElementById('btnEditDone').disabled = _pareti.length < 2;
+  // Ridisegna anteprima
+  drawEditCanvas();
+}
+
+var _editCv, _editCtx;
+function initEditCanvas() {
+  _editCv = document.getElementById('editCanvas');
+  if (!_editCv) return;
+  var dpr = Math.min(window.devicePixelRatio||1, 2);
+  var r = _editCv.getBoundingClientRect();
+  _editCv.width = Math.round(r.width*dpr);
+  _editCv.height = Math.round(r.height*dpr);
+  _editCv._css = {w:r.width, h:r.height};
+  _editCtx = _editCv.getContext('2d');
+  _editCtx.setTransform(dpr,0,0,dpr,0,0);
+  drawEditCanvas();
+}
+
+function drawEditCanvas() {
+  if (!_editCtx || !_editCv._css) return;
+  var css = _editCv._css;
+  var c = _editCtx;
+  c.clearRect(0,0,css.w,css.h);
+  if (_pareti.length === 0) {
+    c.fillStyle = '#475569';
+    c.font = '13px Inter,sans-serif';
+    c.textAlign = 'center';
+    c.fillText('L\'anteprima appare qui', css.w/2, css.h/2);
+    return;
+  }
+  var v = calcolaVerticiEditor();
+  // Bounding box per centrare e scalare
+  var xs = v.map(function(p){return p.x;}), ys = v.map(function(p){return p.y;});
+  var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs);
+  var minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+  var w = maxX-minX || 1, h = maxY-minY || 1;
+  var pad = 30;
+  var scale = Math.min((css.w-pad*2)/w, (css.h-pad*2)/h);
+  var ox = css.w/2 - (minX+maxX)/2*scale;
+  var oy = css.h/2 + (minY+maxY)/2*scale;  // y invertita
+  function px(p){ return [ox + p.x*scale, oy - p.y*scale]; }
+  // Griglia leggera
+  c.strokeStyle = 'rgba(95,227,216,0.08)';
+  c.lineWidth = 1;
+  for (var gx=0; gx<css.w; gx+=24){ c.beginPath(); c.moveTo(gx,0); c.lineTo(gx,css.h); c.stroke(); }
+  for (var gy=0; gy<css.h; gy+=24){ c.beginPath(); c.moveTo(0,gy); c.lineTo(css.w,gy); c.stroke(); }
+  // Pareti
+  c.strokeStyle = '#5fe3d8';
+  c.lineWidth = 2.5;
+  c.beginPath();
+  var p0 = px(v[0]);
+  c.moveTo(p0[0], p0[1]);
+  for (var i=1; i<v.length; i++){ var p = px(v[i]); c.lineTo(p[0], p[1]); }
+  c.stroke();
+  // Vertici e etichette lunghezza
+  for (var i=0; i<v.length; i++){
+    var p = px(v[i]);
+    c.fillStyle = (i===0) ? '#f4c560' : '#5fe3d8';
+    c.beginPath(); c.arc(p[0], p[1], 4, 0, Math.PI*2); c.fill();
+  }
+  // Etichette misure sui lati
+  c.font = '600 11px JetBrains Mono,monospace';
+  c.fillStyle = '#f4c560';
+  c.textAlign = 'center';
+  for (var i=0; i<_pareti.length; i++){
+    var a = px(v[i]), b = px(v[i+1]);
+    var mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
+    c.fillText(_pareti[i].len_cm + '', mx, my-4);
+  }
+  // Punto di partenza
+  c.fillStyle = '#f4c560';
+  c.font = '600 10px Inter,sans-serif';
+  c.fillText('START', p0[0], p0[1]+16);
+}
+
+function confermaEditor() {
+  if (_pareti.length < 2) return;
+  var v = calcolaVerticiEditor();
+  var H = parseFloat(document.getElementById('editH').value)/100 || 2.7;
+  // Costruisci il poligono nella stessa struttura del backend
+  var vertici = v.map(function(p){ return [p.x, p.y]; });
+  // Rimuovi ultimo se coincide col primo (perimetro chiuso)
+  var n = vertici.length;
+  if (n > 1) {
+    var d = Math.hypot(vertici[0][0]-vertici[n-1][0], vertici[0][1]-vertici[n-1][1]);
+    if (d < 0.05) vertici = vertici.slice(0, -1);
+  }
+  var lati = [];
+  for (var i=0; i<vertici.length; i++){
+    var a = vertici[i], b = vertici[(i+1)%vertici.length];
+    var L = Math.hypot(b[0]-a[0], b[1]-a[1]);
+    if (L < 0.05) continue;
+    var ang = Math.atan2(b[1]-a[1], b[0]-a[0]) * 180/Math.PI;
+    lati.push({da:a, a:b, lunghezza_m: Math.round(L*100)/100, direzione_gradi: Math.round(ang*10)/10});
+  }
+  var xs = vertici.map(function(p){return p[0];}), ys = vertici.map(function(p){return p[1];});
+  window._poligonoReale = {
+    vertici: vertici,
+    lati: lati,
+    n_lati: lati.length,
+    altezza_m: H,
+    bbox: [Math.round((Math.max.apply(null,xs)-Math.min.apply(null,xs))*100)/100,
+           Math.round((Math.max.apply(null,ys)-Math.min.apply(null,ys))*100)/100],
+    origine: 'manuale'
+  };
+  var bbox = window._poligonoReale.bbox;
+  toast('Stanza creata: ' + lati.length + ' pareti');
+  doneProc(String(bbox[0]), String(bbox[1]), '0', '0');
+}
+
 
 // ═══ GENERA PDF OFFLINE ═══
 function generaPDF() {
