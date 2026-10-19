@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1620</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1635</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1620</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1635</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1738,35 +1738,65 @@ function draw3d(){
   ln(0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
   ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
   ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
-  // Angoli interni ai 4 angoli della stanza
-  var ra = window._realAngoli || {};
-  // Usa i vertici reali calcolati (sw,se,ne,nw gia definiti sopra)
-  var angoli=[
-    {x:sw.x, y:0, z:sw.z, nome:'SW', ang:(ra.SW||90).toFixed(1)},
-    {x:se.x, y:0, z:se.z, nome:'SE', ang:(ra.SE||90).toFixed(1)},
-    {x:ne.x, y:0, z:ne.z, nome:'NE', ang:(ra.NE||90).toFixed(1)},
-    {x:nw.x, y:0, z:nw.z, nome:'NW', ang:(ra.NW||90).toFixed(1)},
-  ];
-  // Verde=OK, Giallo=attenzione, Rosso=critico
-  angoli.forEach(function(a){
-    var p=pr3d(a.x,a.y,a.z);
-    var scarto=Math.abs(parseFloat(a.ang)-90);
-    var col=scarto<0.5?'#10b981':scarto<1.5?'#f59e0b':'#ef4444';
-    // Cerchio angolo
-    c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
-    c.arc(p[0],p[1],10,0,Math.PI*2);c.stroke();
-    window._clickZones.push({sx:p[0], sy:p[1], r:24, tipo:'angolo', data:{nome:a.nome, ang:a.ang, scarto:scarto}});
-    // Testo gradi
-    c.fillStyle='rgba(10,14,26,0.85)';
-    c.font='500 9px JetBrains Mono,monospace';
-    c.textAlign='center';c.textBaseline='middle';
-    var tw=c.measureText(a.ang+'deg').width+6;
-    var offY=-20;
-    c.fillRect(p[0]-tw/2,p[1]+offY-8,tw,16);
-    c.fillStyle=col;
-    c.fillText(a.ang+'deg',p[0],p[1]+offY);
-    c.textBaseline='alphabetic';
-  });
+  // ═══ QUOTE + FUORI SQUADRO su OGNI lato/angolo del poligono reale ═══
+  var nVp = vertici3d.length;
+  // Mostra quote/angoli solo in vista dall'alto (pianta) o 3D, non serve condizione
+  if (nVp >= 3) {
+    // 1) QUOTE: lunghezza di ogni parete, a metà del lato
+    for (var qi=0; qi<nVp; qi++) {
+      var va = vertici3d[qi];
+      var vb = vertici3d[(qi+1)%nVp];
+      // Salta il lato di chiusura se il poligono è aperto
+      if (!polChiuso && qi === nVp-1) continue;
+      var Lm = Math.hypot(vb.x-va.x, vb.z-va.z);
+      if (Lm < 0.30) continue;  // salta micro-lati di rumore, quota solo pareti reali
+      var mx = (va.x+vb.x)/2, mz = (va.z+vb.z)/2;
+      var pm = pr3d(mx, 0, mz);
+      c.fillStyle='rgba(10,14,26,0.88)';
+      c.font='600 10px JetBrains Mono,monospace';
+      c.textAlign='center'; c.textBaseline='middle';
+      var txt = Lm.toFixed(2)+'m';
+      var tw = c.measureText(txt).width+8;
+      c.fillRect(pm[0]-tw/2, pm[1]-8, tw, 16);
+      c.fillStyle='#5fe3d8';
+      c.fillText(txt, pm[0], pm[1]);
+    }
+    // 2) FUORI SQUADRO: angolo interno a ogni vertice
+    for (var ai=0; ai<nVp; ai++) {
+      var prev = vertici3d[(ai-1+nVp)%nVp];
+      var cur  = vertici3d[ai];
+      var nxt  = vertici3d[(ai+1)%nVp];
+      // Se aperto, salta i due estremi (non hanno angolo chiuso)
+      if (!polChiuso && (ai===0 || ai===nVp-1)) continue;
+      // Vettori dai due lati
+      var v1x=prev.x-cur.x, v1z=prev.z-cur.z;
+      var v2x=nxt.x-cur.x, v2z=nxt.z-cur.z;
+      var l1=Math.hypot(v1x,v1z), l2=Math.hypot(v2x,v2z);
+      // Mostra il fuori squadro solo sugli angoli VERI (pareti significative),
+      // non sui micro-gradini del rumore. Almeno un lato > 1m e l'altro > 0.4m.
+      if (Math.max(l1,l2) < 1.0 || Math.min(l1,l2) < 0.4) continue;
+      var cosA=(v1x*v2x+v1z*v2z)/(l1*l2);
+      cosA=Math.max(-1,Math.min(1,cosA));
+      var angInt=Math.acos(cosA)*180/Math.PI;
+      var scarto=Math.abs(90-angInt);
+      // Colore semaforo: verde a squadro, giallo lieve, rosso fuori squadro
+      var col=scarto<1?'#10b981':scarto<3?'#f59e0b':'#ef4444';
+      var p=pr3d(cur.x,0,cur.z);
+      c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
+      c.arc(p[0],p[1],9,0,Math.PI*2);c.stroke();
+      window._clickZones.push({sx:p[0], sy:p[1], r:22, tipo:'angolo', data:{nome:'Angolo '+(ai+1), ang:angInt.toFixed(1), scarto:scarto}});
+      // Etichetta gradi
+      c.fillStyle='rgba(10,14,26,0.88)';
+      c.font='500 9px JetBrains Mono,monospace';
+      c.textAlign='center';c.textBaseline='middle';
+      var at=angInt.toFixed(0)+'°';
+      var atw=c.measureText(at).width+6;
+      c.fillRect(p[0]-atw/2,p[1]-20-8,atw,16);
+      c.fillStyle=col;
+      c.fillText(at,p[0],p[1]-20);
+      c.textBaseline='alphabetic';
+    }
+  }
 }
 
 // ═══ DETTAGLIO PARTICOLARE ═══
@@ -2249,8 +2279,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.1620 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.1620');
+  console.log('%c LayoutSync v2026.10.19.1635 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.1635');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
