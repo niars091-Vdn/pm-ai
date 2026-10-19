@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1515</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1615</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1515</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1615</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -888,10 +888,18 @@ function mostraSceltaLayer(layers, suggerito) {
   }
   var h = '<div style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Quale layer contiene le pareti?</div>';
   layers.forEach(function(l){
-    var hint = l.polilinee>0 ? l.polilinee+' polilinee' : (l.linee>0 ? l.linee+' linee' : 'vuoto');
+    // Hint: nuvola di punti \u00e8 la scelta migliore (ricostruzione automatica)
+    var hint;
+    if (l.nuvola) hint = '\u2b50 nuvola di ' + l.punti + ' punti \u00b7 ricostruzione automatica';
+    else if (l.polilinee>0) hint = l.polilinee+' polilinee';
+    else if (l.linee>0) hint = l.linee+' linee';
+    else if (l.punti>0) hint = l.punti+' punti';
+    else hint = 'vuoto';
     var isSug = l.nome === suggerito;
-    h += '<div onclick="scegliLayer(\''+l.nome.replace(/'/g,"")+'\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;margin-bottom:6px;background:'+(isSug?'rgba(95,227,216,0.08)':'var(--surface-2)')+';border:1px solid '+(isSug?'var(--acc)':'var(--brd)')+';border-radius:8px;cursor:pointer;">';
-    h += '<div><div style="font-size:13px;font-weight:600;color:var(--txt);">'+l.nome+(isSug?' \u2b50':'')+'</div><div style="font-size:11px;color:var(--t2);margin-top:2px;">'+hint+'</div></div>';
+    var bordo = (l.nuvola || isSug) ? 'var(--acc)' : 'var(--brd)';
+    var sfondo = (l.nuvola || isSug) ? 'rgba(95,227,216,0.08)' : 'var(--surface-2)';
+    h += '<div onclick="scegliLayer(\''+l.nome.replace(/'/g,"")+'\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;margin-bottom:6px;background:'+sfondo+';border:1px solid '+bordo+';border-radius:8px;cursor:pointer;">';
+    h += '<div><div style="font-size:13px;font-weight:600;color:var(--txt);">'+l.nome+(l.nuvola?' \u2b50':(isSug?' \u2b50':''))+'</div><div style="font-size:11px;color:'+(l.nuvola?'var(--acc)':'var(--t2)')+';margin-top:2px;">'+hint+'</div></div>';
     h += '<div style="font-family:var(--mono);font-size:11px;color:var(--t3);">'+l.entita+' entita</div></div>';
   });
   box.innerHTML = h;
@@ -2231,8 +2239,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.1515 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.1515');
+  console.log('%c LayoutSync v2026.10.19.1615 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.1615');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
