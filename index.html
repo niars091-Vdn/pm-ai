@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1725</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1737</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1725</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1737</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1630,15 +1630,19 @@ function draw3d(){
   // disegna solo i lati reali, come fa un lettore CAD.
   var polChiuso = !polig || polig.chiuso !== false;  // default chiuso per compatibilità
   var nLati = polChiuso ? nV : nV - 1;
-  // Disegna ogni parete come quadrilatero verticale
-  for (var vi=0; vi<nLati; vi++) {
-    var a = vertici3d[vi];
-    var b = vertici3d[(vi+1)%nV];
-    pn([[a.x,0,a.z],[b.x,0,b.z],[b.x,H,b.z],[a.x,H,a.z]],'#e2e8f0',0.05);
+  var inPianta = (_vistaCorrente === 'top');
+  // Disegna ogni parete come quadrilatero verticale (SOLO in 3D).
+  // In pianta il quadrilatero mostrerebbe sia il bordo pavimento che soffitto
+  // = doppia linea; quindi in pianta disegniamo solo lo spigolo pavimento sotto.
+  if (!inPianta) {
+    for (var vi=0; vi<nLati; vi++) {
+      var a = vertici3d[vi];
+      var b = vertici3d[(vi+1)%nV];
+      pn([[a.x,0,a.z],[b.x,0,b.z],[b.x,H,b.z],[a.x,H,a.z]],'#e2e8f0',0.05);
+    }
   }
   // Spigoli: in PIANTA solo il pavimento (linea singola, niente doppie);
   // in 3D sia pavimento che soffitto + spigoli verticali.
-  var inPianta = (_vistaCorrente === 'top');
   function edge(a,b,col,lw){
     ln(a.x,0,a.z,b.x,0,b.z,col,lw);           // spigolo pavimento (sempre)
     if(!inPianta) ln(a.x,H,a.z,b.x,H,b.z,col,lw);  // soffitto solo in 3D
@@ -2298,8 +2302,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.1725 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.1725');
+  console.log('%c LayoutSync v2026.10.19.1737 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.1737');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
