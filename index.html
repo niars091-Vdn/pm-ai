@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2205</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2215</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2205</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2215</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1581,6 +1581,56 @@ function init3d() {
 }
 
 var _vistaCorrente = '3d';
+// ── Adatta la PIANTA al canvas: la raddrizza (lato più lungo orizzontale)
+//    e calcola lo zoom per riempire lo schermo con un margine. ──
+function _fitPianta() {
+  var polig = window._poligonoReale;
+  var W=_3W, L=_3L;
+  // Ricava i vertici nel sistema 3D (come draw3d)
+  var verts;
+  if (polig && polig.vertici && polig.vertici.length >= 3) {
+    var vx=polig.vertici.map(function(v){return v[0];});
+    var vz=polig.vertici.map(function(v){return v[1];});
+    var minX=Math.min.apply(null,vx),maxX=Math.max.apply(null,vx);
+    var minZ=Math.min.apply(null,vz),maxZ=Math.max.apply(null,vz);
+    var cxP=(minX+maxX)/2, czP=(minZ+maxZ)/2;
+    verts=polig.vertici.map(function(v){return {x:v[0]-cxP+W/2, z:v[1]-czP+L/2};});
+  } else {
+    verts=[{x:0,z:0},{x:W,z:0},{x:W,z:L},{x:0,z:L}];
+  }
+  // 1) Angolo del lato più lungo -> per raddrizzare (renderlo orizzontale)
+  var nV=verts.length, bestLen=-1, bestAng=0;
+  var chiuso = !polig || polig.chiuso !== false;
+  var nLati = chiuso ? nV : nV-1;
+  for (var i=0;i<nLati;i++){
+    var a=verts[i], b=verts[(i+1)%nV];
+    var dx=b.x-a.x, dz=b.z-a.z, len=Math.hypot(dx,dz);
+    if (len>bestLen){ bestLen=len; bestAng=Math.atan2(dz,dx); }
+  }
+  // In pr3d la componente VERTICALE schermo deriva da (x·sin(_ry) + z·cos(_ry)).
+  // Per rendere il lato (dx,dz) orizzontale (componente verticale nulla),
+  // serve _ry = -angolo del lato.
+  _ry = -bestAng;
+  _rx = Math.PI/2 - 0.01;  // vista dall'alto
+  // 2) Proietta i vertici con questo _ry e misura il bounding box (unità base, zoom=1)
+  var cx0=0, cz0=0; verts.forEach(function(v){cx0+=v.x;cz0+=v.z;}); cx0/=nV; cz0/=nV;
+  var minU=1e9,maxU=-1e9,minVv=1e9,maxVv=-1e9;
+  var cosY=Math.cos(_ry), sinY=Math.sin(_ry);
+  verts.forEach(function(v){
+    var tx=v.x-W/2, tz=v.z-L/2;
+    var hx=tx*cosY - tz*sinY;       // orizzontale schermo
+    var hz=tx*sinY + tz*cosY;       // profondità -> con _rx=π/2 diventa verticale schermo
+    if(hx<minU)minU=hx; if(hx>maxU)maxU=hx;
+    if(hz<minVv)minVv=hz; if(hz>maxVv)maxVv=hz;
+  });
+  var spanU=(maxU-minU)||1, spanV=(maxVv-minVv)||1;
+  var css=window._c3css||{w:360,h:480};
+  // scala base in pr3d è 52; vogliamo che lo span entri nel canvas con margine
+  var margine=0.82;
+  var zU=(css.w*margine)/(52*spanU);
+  var zV=(css.h*margine)/(52*spanV);
+  _zoom=Math.max(0.3, Math.min(zU, zV));
+}
 // ── Aperture inserite manualmente (il laser non le rileva) ──
 // Ogni apertura è agganciata a un LATO del poligono reale:
 //   {lato: indice del lato, t: posizione 0..1 lungo il lato (centro apertura),
@@ -1592,7 +1642,7 @@ function setV3(v, btn) {
   if(btn) btn.classList.add('on');
   _vistaCorrente = v;
   if(v==='3d'){_rx=0.42;_ry=0.55;_zoom=1.0;}
-  if(v==='top'){_rx=Math.PI/2-0.01;_ry=0;_zoom=1.3;}
+  if(v==='top'){ _fitPianta(); if(!window._c3css){ setTimeout(function(){_fitPianta();draw3d();},120); } }   // raddrizza + riempie lo schermo
   if(v==='nord'){_rx=0;_ry=Math.PI;_zoom=1.2;}
   if(v==='est'){_rx=0;_ry=Math.PI/2;_zoom=1.2;}
   // Il tasto "+ Apertura" ha senso solo in pianta: lì tocchi una parete.
@@ -2614,8 +2664,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.2205 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.2205');
+  console.log('%c LayoutSync v2026.10.19.2215 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.2215');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
