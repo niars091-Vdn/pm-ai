@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2230</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2240</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2230</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2240</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1746,6 +1746,7 @@ function tapInserisciApertura(clientX, clientY) {
 var _pickerSel = 'porta';
 function mostraPickerApertura(lato, t, latoLen) {
   _pickerSel = 'porta';
+  _pickerAng = 'sx';
   window._pickerPending = {lato:lato, t:t, latoLen:latoLen};
   var latoCm = (latoLen*100).toFixed(0);
   var html = '';
@@ -1759,12 +1760,25 @@ function mostraPickerApertura(lato, t, latoLen) {
   // Larghezza
   html += '<label style="font-size:12px;color:var(--t2);display:block;margin-bottom:6px;">Larghezza (cm)</label>';
   html += '<input id="pkLarg" type="number" value="80" min="10" max="'+latoCm+'" step="5" inputmode="numeric" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t1);font-size:16px;font-family:var(--mono);margin-bottom:8px;box-sizing:border-box;">';
-  // Preset rapidi
-  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;">';
+  // Preset rapidi larghezza
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">';
   [60,70,80,90,120,160,240].forEach(function(w){
     html += '<button onclick="document.getElementById(\'pkLarg\').value='+w+';" style="padding:6px 10px;border-radius:8px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t2);font-size:12px;cursor:pointer;">'+w+'</button>';
   });
   html += '</div>';
+  // ── Distanza dall'angolo (posizione precisa) ──
+  // t iniziale -> distanza dal lato SX in cm, come default pre-compilato dal tap
+  var distSxIniz = Math.round(t * latoLen * 100);
+  html += '<label style="font-size:12px;color:var(--t2);display:block;margin-bottom:6px;">Distanza dall\'angolo (cm)</label>';
+  html += '<div style="display:flex;gap:8px;margin-bottom:8px;">';
+  html += '<input id="pkDist" type="number" value="'+distSxIniz+'" min="0" max="'+latoCm+'" step="1" inputmode="numeric" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t1);font-size:16px;font-family:var(--mono);box-sizing:border-box;">';
+  html += '</div>';
+  // Scelta: da quale angolo si misura
+  html += '<div style="display:flex;gap:8px;margin-bottom:6px;">';
+  html += '<button id="pkAngSx" onclick="pickerAngolo(\'sx\')" class="pkA on" style="flex:1;padding:10px;border-radius:9px;border:2px solid var(--acc);background:var(--adim);color:var(--acc);font-weight:600;font-size:12px;cursor:pointer;">↤ da angolo SX</button>';
+  html += '<button id="pkAngDx" onclick="pickerAngolo(\'dx\')" class="pkA" style="flex:1;padding:10px;border-radius:9px;border:2px solid var(--brd);background:var(--surface-2);color:var(--t2);font-weight:600;font-size:12px;cursor:pointer;">da angolo DX ↦</button>';
+  html += '</div>';
+  html += '<div style="font-size:11px;color:var(--t3);margin-bottom:18px;">Distanza misurata dal bordo dell\'apertura all\'angolo scelto.</div>';
   // Azioni
   html += '<div style="display:flex;gap:10px;">';
   html += '<button onclick="chiudiPicker()" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t2);font-weight:600;font-size:14px;cursor:pointer;">Annulla</button>';
@@ -1776,6 +1790,18 @@ function mostraPickerApertura(lato, t, latoLen) {
   document.getElementById('detail').style.opacity = '1';
   document.getElementById('detail').style.pointerEvents = 'all';
   document.getElementById('detail-sheet').style.transform = 'translateY(0)';
+}
+var _pickerAng = 'sx';   // da quale angolo si misura la distanza
+function pickerAngolo(a) {
+  _pickerAng = a;
+  var sx = document.getElementById('pkAngSx'), dx = document.getElementById('pkAngDx');
+  if (a==='sx') {
+    sx.style.borderColor='var(--acc)'; sx.style.background='var(--adim)'; sx.style.color='var(--acc)'; sx.classList.add('on');
+    dx.style.borderColor='var(--brd)'; dx.style.background='var(--surface-2)'; dx.style.color='var(--t2)'; dx.classList.remove('on');
+  } else {
+    dx.style.borderColor='var(--acc)'; dx.style.background='var(--adim)'; dx.style.color='var(--acc)'; dx.classList.add('on');
+    sx.style.borderColor='var(--brd)'; sx.style.background='var(--surface-2)'; sx.style.color='var(--t2)'; sx.classList.remove('on');
+  }
 }
 function pickerTipo(t) {
   _pickerSel = t;
@@ -1801,15 +1827,28 @@ function confermaApertura() {
   if (!pend) { chiudiPicker(); return; }
   var larg = parseFloat(document.getElementById('pkLarg').value) / 100;  // cm -> m
   if (!(larg > 0)) { toast('Larghezza non valida'); return; }
-  // non superare la lunghezza del lato
   larg = Math.min(larg, pend.latoLen * 0.98);
+  var latoLen = pend.latoLen;
+  // Distanza dall'angolo scelto fino al BORDO dell'apertura (cm -> m)
+  var dist = parseFloat(document.getElementById('pkDist').value) / 100;
+  if (isNaN(dist) || dist < 0) dist = 0;
+  // Posizione del CENTRO apertura come frazione del lato (0..1):
+  // se misuro da SX -> centro = dist + larg/2 dal lato SX
+  // se misuro da DX -> centro = latoLen - dist - larg/2
+  var centroM;
+  if (_pickerAng === 'dx') centroM = latoLen - dist - larg/2;
+  else                     centroM = dist + larg/2;
+  // Vincola dentro il lato
+  centroM = Math.max(larg/2, Math.min(latoLen - larg/2, centroM));
+  var tFinale = centroM / latoLen;
   window._apertureManuali.push({
-    lato: pend.lato, t: pend.t, larghezza: larg, tipo: _pickerSel
+    lato: pend.lato, t: tFinale, larghezza: larg, tipo: _pickerSel
   });
   chiudiPicker();
-  annullaModoApertura();   // esci dalla modalità dopo l'inserimento
+  annullaModoApertura();
   draw3d();
-  toast((_pickerSel==='porta'?'Porta':'Finestra')+' aggiunta · '+(larg*100).toFixed(0)+' cm');
+  var daAng = _pickerAng==='dx' ? 'DX' : 'SX';
+  toast((_pickerSel==='porta'?'Porta':'Finestra')+' · '+(larg*100).toFixed(0)+'cm · a '+(dist*100).toFixed(0)+'cm da '+daAng);
 }
 function eliminaApertura(idx) {
   if (window._apertureManuali && window._apertureManuali[idx]) {
@@ -2158,7 +2197,7 @@ function draw3d(){
       // Pallino angolo (pieno, colore semaforo)
       c.beginPath();c.fillStyle=col;c.arc(p[0],p[1],5,0,Math.PI*2);c.fill();
       c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;c.arc(p[0],p[1],8,0,Math.PI*2);c.stroke();
-      window._clickZones.push({sx:p[0], sy:p[1], r:22, tipo:'angolo', data:{nome:'Angolo '+(ai+1), ang:angInt.toFixed(1), scarto:scarto}});
+      window._clickZones.push({sx:p[0], sy:p[1], r:32, tipo:'angolo', data:{nome:'Angolo '+(ai+1), ang:angInt.toFixed(1), scarto:scarto}});
       // Etichetta spostata VERSO L'ESTERNO del poligono (dal centro al vertice)
       var dcx=cur.x-W/2, dcz=cur.z-L/2;
       var dcl=Math.hypot(dcx,dcz)||1;
@@ -2682,8 +2721,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.2230 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.2230');
+  console.log('%c LayoutSync v2026.10.19.2240 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.2240');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
