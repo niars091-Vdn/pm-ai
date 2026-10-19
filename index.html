@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1615</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.1620</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1615</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.1620</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -870,6 +870,16 @@ function caricaLayerDxf(file) {
     .then(function(r){ return r.json(); })
     .then(function(data){
       window._dxfJobId = data.job_id;
+      // Se c'è una nuvola di punti chiara, scegli da solo e salta la lista
+      var nuvola = (data.layers || []).filter(function(l){ return l.nuvola; });
+      if (nuvola.length === 1) {
+        window._dxfLayer = nuvola[0].nome;
+        document.getElementById('izt').textContent = 'Stanza rilevata';
+        document.getElementById('izs').textContent = 'Nuvola di ' + nuvola[0].punti + ' punti · premi Analizza';
+        document.getElementById('btnanalyze').disabled = false;
+        toast('Nuvola rilevata: ricostruzione automatica');
+        return;
+      }
       mostraSceltaLayer(data.layers, data.suggerito);
     })
     .catch(function(e){
@@ -2239,8 +2249,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.1615 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.1615');
+  console.log('%c LayoutSync v2026.10.19.1620 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.19.1620');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
