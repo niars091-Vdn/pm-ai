@@ -1605,15 +1605,20 @@ function draw3d(){
   }
 
   var nV = vertici3d.length;
+  // Se il perimetro è CHIUSO (stanza) disegna tutti i lati incluso quello di
+  // ritorno al primo punto. Se è APERTO (rilievo parziale) NON chiudere:
+  // disegna solo i lati reali, come fa un lettore CAD.
+  var polChiuso = !polig || polig.chiuso !== false;  // default chiuso per compatibilità
+  var nLati = polChiuso ? nV : nV - 1;
   // Disegna ogni parete come quadrilatero verticale
-  for (var vi=0; vi<nV; vi++) {
+  for (var vi=0; vi<nLati; vi++) {
     var a = vertici3d[vi];
     var b = vertici3d[(vi+1)%nV];
     pn([[a.x,0,a.z],[b.x,0,b.z],[b.x,H,b.z],[a.x,H,a.z]],'#e2e8f0',0.05);
   }
   // Spigoli orizzontali (alto e basso) e verticali
   function edge(a,b,col,lw){ln(a.x,0,a.z,b.x,0,b.z,col,lw);ln(a.x,H,a.z,b.x,H,b.z,col,lw);}
-  for (var vi2=0; vi2<nV; vi2++) {
+  for (var vi2=0; vi2<nLati; vi2++) {
     edge(vertici3d[vi2], vertici3d[(vi2+1)%nV], '#e2e8f0', 2);
   }
   vertici3d.forEach(function(v){ln(v.x,0,v.z,v.x,H,v.z,'#e2e8f0',2);});
