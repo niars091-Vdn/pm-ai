@@ -203,7 +203,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
 .vtlbl{font-size:10px;font-weight:700;color:#8b7df6;text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0;opacity:0.8;}
 .vtbtn{padding:6px 14px;background:rgba(139,125,246,0.08);border:1px solid rgba(139,125,246,0.3);border-radius:8px;color:#b4a9f8;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
 .vtbtn.on{background:rgba(139,125,246,0.28);border-color:#8b7df6;color:#d6ccff;}
-.vtbtn.solo{margin-left:auto;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.4);color:#f5b942;}
+.vtbtn.solo{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.4);color:#f5b942;}
 .vtbtn.solo.on{background:rgba(245,158,11,0.3);border-color:#f59e0b;color:#ffd27a;}
 #c3{flex:1;width:100%;display:block;touch-action:none;}
 .i3bar{display:flex;gap:10px;padding:8px 14px;background:rgba(15,23,34,0.92);border-top:1px solid var(--brd);flex-shrink:0;overflow-x:auto;scrollbar-width:none;backdrop-filter:blur(10px);}
@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.20.2315</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.20.2325</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.20.2315</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.20.2325</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1550,24 +1550,47 @@ function apriPianta() {
   }, 350);
 }
 
+// Adatta la risoluzione interna del canvas alla sua dimensione reale a schermo.
+// Va richiamata a ogni resize (es. schermo intero su PC) o il disegno si stira.
+function _resizeCanvas3d() {
+  var c3 = document.getElementById('c3');
+  if (!c3) return;
+  var r = c3.getBoundingClientRect();
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cssW = r.width || window.innerWidth;
+  var cssH = r.height || (window.innerHeight - 180);
+  if (cssW < 2 || cssH < 2) return;  // canvas non ancora visibile
+  c3.width = Math.round(cssW * dpr);
+  c3.height = Math.round(cssH * dpr);
+  c3.style.width = cssW + 'px';
+  c3.style.height = cssH + 'px';
+  var ctx = c3.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  window._c3css = {w: cssW, h: cssH};
+  // In pianta ri-adatta lo zoom alla nuova area (così non si deforma né esce)
+  if (_vistaCorrente === 'top') { try { _fitPianta(); } catch(e){} }
+  draw3d();
+}
+
 function init3d() {
   var c3 = document.getElementById('c3');
-  // Usa getBoundingClientRect per dimensioni reali dopo il layout
-  setTimeout(function() {
-    var r = c3.getBoundingClientRect();
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var cssW = r.width || window.innerWidth;
-    var cssH = r.height || (window.innerHeight - 180);
-    c3.width = Math.round(cssW * dpr);
-    c3.height = Math.round(cssH * dpr);
-    c3.style.width = cssW + 'px';
-    c3.style.height = cssH + 'px';
-    var ctx = c3.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    window._c3css = {w: cssW, h: cssH};
-    draw3d();
-  }, 50);
-  var c3 = document.getElementById('c3');
+  setTimeout(_resizeCanvas3d, 50);
+  // Riadatta il canvas quando la sua dimensione cambia (schermo intero, rotazione,
+  // resize finestra). ResizeObserver cattura anche i cambi di layout, non solo window.
+  if (!window._ro3d && 'ResizeObserver' in window) {
+    window._ro3d = new ResizeObserver(function(){
+      clearTimeout(window._ro3dT);
+      window._ro3dT = setTimeout(_resizeCanvas3d, 80);
+    });
+    window._ro3d.observe(c3);
+  }
+  if (!window._winResize3d) {
+    window._winResize3d = true;
+    window.addEventListener('resize', function(){
+      clearTimeout(window._ro3dT);
+      window._ro3dT = setTimeout(_resizeCanvas3d, 80);
+    });
+  }
   c3.onmousedown = function(e){_d3=true;_lx3=e.clientX;_ly3=e.clientY;};
   c3.onmousemove = function(e){if(!_d3) return;
     if(_vistaCorrente==='top'){ _panX+=(e.clientX-_lx3); _panY+=(e.clientY-_ly3); }  // pianta: trascina (pan), niente rotazione
@@ -2772,8 +2795,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.20.2315 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.20.2315');
+  console.log('%c LayoutSync v2026.10.20.2325 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.20.2325');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
