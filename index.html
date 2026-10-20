@@ -234,7 +234,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.19.2240</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.20.2225</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +247,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.19.2240</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.20.2225</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -461,6 +461,10 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
       <button class="v3btn" onclick="setV3('est',this)">Est</button>
       <button class="v3btn" id="projBtn" onclick="toggleProj(this)" style="margin-left:4px;">Prosp.</button>
       <button class="v3btn" id="btnApertura" onclick="toggleModoApertura(this)" style="margin-left:4px;display:none;">+ Apertura</button>
+      <button class="v3btn on" id="tgQuote" onclick="toggleVista('quote',this)" style="margin-left:8px;">Quote</button>
+      <button class="v3btn on" id="tgAngoli" onclick="toggleVista('angoli',this)">Angoli</button>
+      <button class="v3btn on" id="tgDiag" onclick="toggleVista('diag',this)">Diag.</button>
+      <button class="v3btn" id="tgSolo" onclick="soloContorno(this)">Solo linea</button>
     </div>
   </div>
   <canvas id="c3" style="flex:1;width:100%;display:block;touch-action:none;min-height:0;"></canvas>
@@ -510,6 +514,8 @@ var WALLS4 = ['NORD','SUD','EST','OVEST'];
 var cv, ctx2d;
 var _rx=0.42, _ry=0.55, _zoom=1.0, _d3=false, _lx3=0, _ly3=0, _p3=0;
 var _panX=0, _panY=0;   // spostamento (pan) in pixel, usato in vista pianta
+// Visibilità elementi del disegno (tasto "vista")
+var _showQuote=true, _showAngoli=true, _showDiag=true;
 var _3W=3.85, _3L=4.20, _3H=2.70;
 var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
 
@@ -1859,6 +1865,36 @@ function eliminaApertura(idx) {
   }
 }
 
+// Mostra/nascondi singoli elementi del disegno
+function toggleVista(cosa, btn) {
+  if (cosa==='quote')  _showQuote  = !_showQuote;
+  if (cosa==='angoli') _showAngoli = !_showAngoli;
+  if (cosa==='diag')   _showDiag   = !_showDiag;
+  if (btn) btn.classList.toggle('on',
+    cosa==='quote'?_showQuote : cosa==='angoli'?_showAngoli : _showDiag);
+  _sincronizzaTastiVista();
+  draw3d();
+}
+// Un tocco: lascia SOLO la linea del perimetro (toglie tutto il resto)
+function soloContorno(btn) {
+  var tuttoSpento = (!_showQuote && !_showAngoli && !_showDiag);
+  // se è già "solo linea", il tasto RIACCENDE tutto; altrimenti spegne tutto
+  var nuovo = tuttoSpento ? true : false;
+  _showQuote = nuovo; _showAngoli = nuovo; _showDiag = nuovo;
+  _sincronizzaTastiVista();
+  draw3d();
+  toast(tuttoSpento ? 'Vista completa' : 'Solo contorno');
+}
+function _sincronizzaTastiVista() {
+  var q=document.getElementById('tgQuote'), a=document.getElementById('tgAngoli'),
+      d=document.getElementById('tgDiag'), s=document.getElementById('tgSolo');
+  if(q) q.classList.toggle('on',_showQuote);
+  if(a) a.classList.toggle('on',_showAngoli);
+  if(d) d.classList.toggle('on',_showDiag);
+  // "Solo linea" risulta attivo quando tutto il resto è spento
+  if(s) s.classList.toggle('on', !_showQuote && !_showAngoli && !_showDiag);
+}
+
 function toggleProj(btn) {
   _proj = (_proj === 'prosp') ? 'asso' : 'prosp';
   btn.textContent = (_proj === 'prosp') ? 'Prosp.' : 'Asso.';
@@ -2131,7 +2167,7 @@ function draw3d(){
     {nome:'EST',   x:W,   y:H*0.5, z:L/2, v:fs.EST},
     {nome:'OVEST', x:0,   y:H*0.5, z:L/2, v:fs.OVEST}
   ];
-  pareti3d.forEach(function(pw){
+  if (_showAngoli) pareti3d.forEach(function(pw){
     if (pw.v === undefined || pw.v === null) return;
     var col = fsColor(pw.v);
     var stato = pw.v<0.5?'OK':pw.v<1.5?'!':'!!';
@@ -2139,18 +2175,22 @@ function draw3d(){
   });
 
   // Diagonali pavimento
-  ln(0,0.02,0,W,0.02,L,'#a855f7',2,[8,4]);
-  ln(W,0.02,0,0,0.02,L,'#f97316',2,[8,4]);
-  // Quote
-  ln(0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
-  ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
-  ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
+  if (_showDiag) {
+    ln(0,0.02,0,W,0.02,L,'#a855f7',2,[8,4]);
+    ln(W,0.02,0,0,0.02,L,'#f97316',2,[8,4]);
+  }
+  // Righe di quota esterne (contorno del box di quotatura)
+  if (_showQuote) {
+    ln(0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
+    ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
+    ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
+  }
   // ═══ QUOTE + FUORI SQUADRO su OGNI lato/angolo del poligono reale ═══
   var nVp = vertici3d.length;
   // Mostra quote/angoli solo in vista dall'alto (pianta) o 3D, non serve condizione
   if (nVp >= 3) {
     // 1) QUOTE: lunghezza di ogni parete, a metà del lato
-    for (var qi=0; qi<nVp; qi++) {
+    for (var qi=0; _showQuote && qi<nVp; qi++) {
       var va = vertici3d[qi];
       var vb = vertici3d[(qi+1)%nVp];
       // Salta il lato di chiusura se il poligono è aperto
@@ -2174,7 +2214,7 @@ function draw3d(){
       c.fillText(txt, pm[0], pm[1]);
     }
     // 2) FUORI SQUADRO: angolo interno a ogni vertice
-    for (var ai=0; ai<nVp; ai++) {
+    for (var ai=0; _showAngoli && ai<nVp; ai++) {
       var prev = vertici3d[(ai-1+nVp)%nVp];
       var cur  = vertici3d[ai];
       var nxt  = vertici3d[(ai+1)%nVp];
@@ -2721,8 +2761,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.19.2240 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.19.2240');
+  console.log('%c LayoutSync v2026.10.20.2225 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.20.2225');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
