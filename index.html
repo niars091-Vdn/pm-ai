@@ -197,6 +197,14 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
 .v3btns{display:flex;gap:5px;}
 .v3btn{padding:5px 10px;background:var(--surface-2);border:1px solid var(--brd);border-radius:8px;color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;}
 .v3btn.on{background:var(--adim);border-color:var(--acc);color:var(--acc);}
+/* Barra toggle vista (in basso): colore VIOLA per distinguerla dalla navigazione */
+.vtbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(20,16,36,0.92);border-top:1px solid rgba(139,125,246,0.25);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.vtbar::-webkit-scrollbar{display:none;}
+.vtlbl{font-size:10px;font-weight:700;color:#8b7df6;text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0;opacity:0.8;}
+.vtbtn{padding:6px 14px;background:rgba(139,125,246,0.08);border:1px solid rgba(139,125,246,0.3);border-radius:8px;color:#b4a9f8;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
+.vtbtn.on{background:rgba(139,125,246,0.28);border-color:#8b7df6;color:#d6ccff;}
+.vtbtn.solo{margin-left:auto;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.4);color:#f5b942;}
+.vtbtn.solo.on{background:rgba(245,158,11,0.3);border-color:#f59e0b;color:#ffd27a;}
 #c3{flex:1;width:100%;display:block;touch-action:none;}
 .i3bar{display:flex;gap:10px;padding:8px 14px;background:rgba(15,23,34,0.92);border-top:1px solid var(--brd);flex-shrink:0;overflow-x:auto;scrollbar-width:none;backdrop-filter:blur(10px);}
 .i3bar::-webkit-scrollbar{display:none;}
@@ -234,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.20.2255</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.20.2315</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -247,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.20.2255</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.20.2315</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -461,10 +469,6 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
       <button class="v3btn" onclick="setV3('est',this)">Est</button>
       <button class="v3btn" id="projBtn" onclick="toggleProj(this)" style="margin-left:4px;">Prosp.</button>
       <button class="v3btn" id="btnApertura" onclick="toggleModoApertura(this)" style="margin-left:4px;display:none;">+ Apertura</button>
-      <button class="v3btn on" id="tgQuote" onclick="toggleVista('quote',this)" style="margin-left:8px;">Quote</button>
-      <button class="v3btn on" id="tgAngoli" onclick="toggleVista('angoli',this)">Angoli</button>
-      <button class="v3btn on" id="tgDiag" onclick="toggleVista('diag',this)">Diag.</button>
-      <button class="v3btn" id="tgSolo" onclick="soloContorno(this)">Solo linea</button>
     </div>
   </div>
   <canvas id="c3" style="flex:1;width:100%;display:block;touch-action:none;min-height:0;"></canvas>
@@ -479,6 +483,13 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="i3s"><span class="v" id="i3h">--</span><span class="l">Alt.</span></div>
     <div class="idiv"></div>
     <div class="i3s"><span class="v" id="i3d" style="color:#8b7df6">--</span><span class="l">Diag.</span></div>
+  </div>
+  <div class="vtbar">
+    <span class="vtlbl">Mostra:</span>
+    <button class="vtbtn on" id="tgQuote" onclick="toggleVista('quote',this)">Quote</button>
+    <button class="vtbtn on" id="tgAngoli" onclick="toggleVista('angoli',this)">Angoli</button>
+    <button class="vtbtn on" id="tgDiag" onclick="toggleVista('diag',this)">Diag.</button>
+    <button class="vtbtn solo" id="tgSolo" onclick="soloContorno(this)">Solo linea</button>
   </div>
   <div class="bot">
     <button class="btn g" onclick="goScreen('sw')">🏠</button>
@@ -2761,8 +2772,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.20.2255 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.20.2255');
+  console.log('%c LayoutSync v2026.10.20.2315 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.20.2315');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
