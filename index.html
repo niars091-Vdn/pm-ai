@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1100</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1105</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1100</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1105</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -1651,7 +1651,7 @@ function _fitPianta() {
     var minX=Math.min.apply(null,vx),maxX=Math.max.apply(null,vx);
     var minZ=Math.min.apply(null,vz),maxZ=Math.max.apply(null,vz);
     var cxP=(minX+maxX)/2, czP=(minZ+maxZ)/2;
-    verts=polig.vertici.map(function(v){return {x:v[0]-cxP+W/2, z:v[1]-czP+L/2};});
+    verts=polig.vertici.map(function(v){return {x:v[0]-cxP+W/2, z:-(v[1]-czP)+L/2};});
   } else {
     verts=[{x:0,z:0},{x:W,z:0},{x:W,z:L},{x:0,z:L}];
   }
@@ -1727,7 +1727,7 @@ function _vertici3dCorrenti() {
     var minX=Math.min.apply(null,vx), maxX=Math.max.apply(null,vx);
     var minZ=Math.min.apply(null,vz), maxZ=Math.max.apply(null,vz);
     var cxP=(minX+maxX)/2, czP=(minZ+maxZ)/2;
-    return polig.vertici.map(function(v){ return {x:v[0]-cxP+W/2, z:v[1]-czP+L/2}; });
+    return polig.vertici.map(function(v){ return {x:v[0]-cxP+W/2, z:-(v[1]-czP)+L/2}; });
   }
   var ra0 = window._realAngoli || {};
   var V = calcVertici(W, L, ra0);
@@ -2020,9 +2020,12 @@ function draw3d(){
     var minX = Math.min.apply(null,vx), maxX = Math.max.apply(null,vx);
     var minZ = Math.min.apply(null,vz), maxZ = Math.max.apply(null,vz);
     var cxP = (minX+maxX)/2, czP = (minZ+maxZ)/2;
-    // Trasla così che il centro del poligono sia al centro stanza (W/2, L/2)
+    // Trasla così che il centro del poligono sia al centro stanza (W/2, L/2).
+    // Inverto la Y (-(v[1])) perché la vista dall'alto del canvas ribalta l'asse
+    // verticale: senza questo la pianta appare specchiata sopra-sotto rispetto
+    // al DXF (e al disegno tecnico).
     vertici3d = polig.vertici.map(function(v){
-      return {x: v[0]-cxP + W/2, z: v[1]-czP + L/2};
+      return {x: v[0]-cxP + W/2, z: -(v[1]-czP) + L/2};
     });
   } else {
     // Fallback: box rettangolare dai 4 angoli
@@ -2795,8 +2798,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1100 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1100');
+  console.log('%c LayoutSync v2026.10.21.1105 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1105');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
