@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1530</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1545</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1530</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1545</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -2721,10 +2721,8 @@ function openDetail(zone, px, py) {
     // ── Altezza di questa parete ──
     var hParete = (window._altezzeParete[d.indice] !== undefined) ? window._altezzeParete[d.indice] : _3H;
     html += '<label style="font-size:12px;color:var(--t2);display:block;margin:14px 0 6px;">Altezza parete (cm)</label>';
-    html += '<div style="display:flex;gap:8px;">';
-    html += '<input id="latoAltInp" type="number" value="'+(hParete*100).toFixed(0)+'" min="50" step="1" inputmode="numeric" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t1);font-size:16px;font-family:var(--mono);box-sizing:border-box;">';
-    html += '<button onclick="applicaAltezzaParete('+d.indice+')" style="padding:12px 16px;border-radius:10px;border:none;background:var(--acc);color:#04201d;font-weight:700;font-size:14px;cursor:pointer;">OK</button>';
-    html += '</div>';
+    html += '<input id="latoAltInp" type="number" value="'+(hParete*100).toFixed(0)+'" min="50" step="1" inputmode="numeric" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t1);font-size:16px;font-family:var(--mono);box-sizing:border-box;margin-bottom:8px;">';
+    html += '<button onclick="applicaAltezzaParete('+d.indice+')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--acc);color:#04201d;font-weight:700;font-size:14px;cursor:pointer;">Imposta altezza</button>';
     html += '<div style="font-size:11px;color:var(--t3);margin:6px 0 2px;">Ogni parete può avere un\'altezza diversa (soppalco, controsoffitto...).</div>';
 
     html += '<div style="margin-top:12px;padding:12px;background:var(--card);border-radius:8px;font-size:12px;color:var(--t2);line-height:1.5;">La forma e gli angoli restano quelli del laser. La misura col metro corregge la <b>lunghezza</b> di questa parete. Lo scostamento ti dice quanto il laser si discostava.</div>';
@@ -2998,8 +2996,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1530 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1530');
+  console.log('%c LayoutSync v2026.10.21.1545 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1545');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
