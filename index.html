@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1515</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1530</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1515</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1530</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -505,9 +505,9 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   <div id="cfgs"><div class="cfgh"></div><h3>⚙️ Server LayoutSync</h3><input class="cfgi" id="cfgurl" type="url" placeholder="https://layoutsync-backend.onrender.com"><button class="btn p" style="width:100%" onclick="saveCfg()">Salva e verifica connessione</button></div>
 </div>
 <!-- PANNELLO DETTAGLIO PARTICOLARE -->
-<div id="detail" onclick="detailOut(event)" style="position:fixed;inset:0;z-index:350;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.2s;display:flex;align-items:flex-end;">
-  <div id="detail-sheet" style="width:100%;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 36px;border-top:1px solid var(--border-strong);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);max-height:80vh;overflow-y:auto;">
-    <div style="width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 18px;"></div>
+<div id="detail" onclick="detailOut(event)" style="position:fixed;inset:0;z-index:350;background:rgba(0,0,0,0.35);opacity:0;pointer-events:none;transition:opacity 0.15s;">
+  <div id="detail-sheet" style="position:absolute;width:300px;max-width:90vw;background:var(--surface);border-radius:14px;padding:16px 16px 18px;border:1px solid var(--border-strong);box-shadow:0 12px 40px -8px rgba(0,0,0,0.6);transform:scale(0.92);opacity:0;transition:transform 0.16s cubic-bezier(0.32,0.72,0,1),opacity 0.16s;max-height:82vh;overflow-y:auto;">
+    <button onclick="detailClose()" style="position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:8px;border:none;background:var(--surface-2);color:var(--t2);font-size:16px;cursor:pointer;line-height:1;">×</button>
     <div id="detail-content"></div>
   </div>
 </div>
@@ -531,6 +531,8 @@ var _showQuote=true, _showAngoli=true, _showDiag=true;
 window._misureMetro = window._misureMetro || {};
 // Pareti nascoste a mano (es. la chiusura virtuale di un rilievo aperto): {indiceLato: true}
 window._latiNascosti = window._latiNascosti || {};
+// Altezza personalizzata per singola parete (m): {indiceLato: altezza}. Se assente usa _3H.
+window._altezzeParete = window._altezzeParete || {};
 var _3W=3.85, _3L=4.20, _3H=2.70;
 var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
 var _fov=7;  // intensita prospettiva: piu BASSO = piu accentuata (Ctrl+scroll). _fov=7 ~ +150% tra vicino e lontano. Scala in metri perche l'effetto si veda.
@@ -1333,6 +1335,7 @@ function runProc() {
         window._poligonoReale = data.poligono;
         window._latiNascosti = {};   // nuovo file: azzera pareti nascoste
         window._misureMetro = {};    // e correzioni metro del file precedente
+        window._altezzeParete = {};  // e altezze personalizzate
         window._apertureManuali = [];
         console.log('Poligono DXF:', data.n_lati, 'lati');
         toast('Pianta importata: ' + data.n_lati + ' lati');
@@ -1800,6 +1803,7 @@ function tapInserisciApertura(clientX, clientY) {
   // Lunghezza del lato scelto in metri (per limitare la larghezza apertura)
   var a = verts[best.lato], b = verts[(best.lato+1)%nV];
   var latoLen = Math.hypot(b.x-a.x, b.z-a.z);
+  window._pickerPx = clientX; window._pickerPy = clientY;
   mostraPickerApertura(best.lato, best.t, latoLen);
 }
 
@@ -1847,10 +1851,7 @@ function mostraPickerApertura(lato, t, latoLen) {
   html += '</div>';
   document.getElementById('detail-content').innerHTML = html;
   window._schemaData = null;
-  document.getElementById('detail').classList.add('open');
-  document.getElementById('detail').style.opacity = '1';
-  document.getElementById('detail').style.pointerEvents = 'all';
-  document.getElementById('detail-sheet').style.transform = 'translateY(0)';
+  _mostraPopup(window._pickerPx, window._pickerPy);
 }
 var _pickerAng = 'sx';   // da quale angolo si misura la distanza
 function pickerAngolo(a) {
@@ -1878,10 +1879,7 @@ function pickerTipo(t) {
 }
 function chiudiPicker() {
   window._pickerPending = null;
-  document.getElementById('detail').classList.remove('open');
-  document.getElementById('detail').style.opacity = '0';
-  document.getElementById('detail').style.pointerEvents = 'none';
-  document.getElementById('detail-sheet').style.transform = 'translateY(100%)';
+  closeDetail();
 }
 function confermaApertura() {
   var pend = window._pickerPending;
@@ -1978,6 +1976,15 @@ function mostraParete(indice) {
   chiudiPicker();
   draw3d();
   toast('Parete '+(indice+1)+' ripristinata');
+}
+// Imposta un'altezza personalizzata per una singola parete (cm -> m).
+function applicaAltezzaParete(indice) {
+  var cm = parseFloat(document.getElementById('latoAltInp').value);
+  if (!(cm > 0)) { toast('Altezza non valida'); return; }
+  window._altezzeParete[indice] = cm/100;
+  closeDetail();
+  draw3d();
+  toast('Parete '+(indice+1)+': altezza '+cm+' cm');
 }
 
 // Mostra/nascondi singoli elementi del disegno
@@ -2129,25 +2136,35 @@ function draw3d(){
   // Disegna ogni parete come quadrilatero verticale (SOLO in 3D).
   // In pianta il quadrilatero mostrerebbe sia il bordo pavimento che soffitto
   // = doppia linea; quindi in pianta disegniamo solo lo spigolo pavimento sotto.
+  // Altezza di una parete: personalizzata (_altezzeParete) o quella di stanza H.
+  function hLato(i){ var a=(window._altezzeParete||{})[i]; return (a!==undefined)?a:H; }
   if (!inPianta) {
     for (var vi=0; vi<nLati; vi++) {
+      if (window._latiNascosti && window._latiNascosti[vi]) continue;
       var a = vertici3d[vi];
       var b = vertici3d[(vi+1)%nV];
-      pn([[a.x,0,a.z],[b.x,0,b.z],[b.x,H,b.z],[a.x,H,a.z]],'#e2e8f0',0.05);
+      var hv = hLato(vi);
+      pn([[a.x,0,a.z],[b.x,0,b.z],[b.x,hv,b.z],[a.x,hv,a.z]],'#e2e8f0',0.05);
     }
   }
-  // Spigoli: in PIANTA solo il pavimento (linea singola, niente doppie);
-  // in 3D sia pavimento che soffitto + spigoli verticali.
-  function edge(a,b,col,lw){
-    ln(a.x,0,a.z,b.x,0,b.z,col,lw);           // spigolo pavimento (sempre)
-    if(!inPianta) ln(a.x,H,a.z,b.x,H,b.z,col,lw);  // soffitto solo in 3D
+  // Spigoli: in PIANTA solo il pavimento; in 3D anche soffitto (all'altezza
+  // della parete) + spigoli verticali.
+  function edgeI(i,col,lw){
+    var a=vertici3d[i], b=vertici3d[(i+1)%nV], hv=hLato(i);
+    ln(a.x,0,a.z,b.x,0,b.z,col,lw);
+    if(!inPianta) ln(a.x,hv,a.z,b.x,hv,b.z,col,lw);
   }
   for (var vi2=0; vi2<nLati; vi2++) {
     if (window._latiNascosti && window._latiNascosti[vi2]) continue;  // parete nascosta a mano
-    edge(vertici3d[vi2], vertici3d[(vi2+1)%nV], '#e2e8f0', 2);
+    edgeI(vi2, '#e2e8f0', 2);
   }
   if(!inPianta){
-    vertici3d.forEach(function(v){ln(v.x,0,v.z,v.x,H,v.z,'#e2e8f0',2);});
+    // spigoli verticali: altezza = max delle due pareti che vi convergono
+    for (var vv=0; vv<nV; vv++){
+      var hA=hLato(vv), hB=hLato((vv-1+nV)%nV);
+      var hvv=Math.max(hA,hB);
+      ln(vertici3d[vv].x,0,vertici3d[vv].z, vertici3d[vv].x,hvv,vertici3d[vv].z,'#e2e8f0',2);
+    }
   }
   // Compatibilita: mantieni sw/se/ne/nw per il resto del codice
   var sw=vertici3d[0], se=vertici3d[1]||vertici3d[0], ne=vertici3d[2]||vertici3d[0], nw=vertici3d[3]||vertici3d[0];
@@ -2423,7 +2440,7 @@ function handle3dTap(clientX, clientY) {
     var d = Math.hypot(zones[i].sx - x, zones[i].sy - y);
     if (d < zones[i].r && d < hitD) { hitD = d; hit = zones[i]; }
   }
-  if (hit) openDetail(hit);
+  if (hit) openDetail(hit, clientX, clientY);
 }
 
 
@@ -2552,7 +2569,7 @@ function toggleAcc(header) {
   }
 }
 
-function openDetail(zone) {
+function openDetail(zone, px, py) {
   var W = _3W, L = _3L, H = _3H;
   var html = '';
   if (zone.tipo === 'elemento') {
@@ -2701,6 +2718,15 @@ function openDetail(zone) {
     }
     html += '<button onclick="applicaMetro('+d.indice+','+d.laser+')" style="flex:2;padding:13px;border-radius:12px;border:none;background:var(--acc);color:#04201d;font-weight:700;font-size:14px;cursor:pointer;">Applica misura</button>';
     html += '</div>';
+    // ── Altezza di questa parete ──
+    var hParete = (window._altezzeParete[d.indice] !== undefined) ? window._altezzeParete[d.indice] : _3H;
+    html += '<label style="font-size:12px;color:var(--t2);display:block;margin:14px 0 6px;">Altezza parete (cm)</label>';
+    html += '<div style="display:flex;gap:8px;">';
+    html += '<input id="latoAltInp" type="number" value="'+(hParete*100).toFixed(0)+'" min="50" step="1" inputmode="numeric" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--brd);background:var(--surface-2);color:var(--t1);font-size:16px;font-family:var(--mono);box-sizing:border-box;">';
+    html += '<button onclick="applicaAltezzaParete('+d.indice+')" style="padding:12px 16px;border-radius:10px;border:none;background:var(--acc);color:#04201d;font-weight:700;font-size:14px;cursor:pointer;">OK</button>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--t3);margin:6px 0 2px;">Ogni parete può avere un\'altezza diversa (soppalco, controsoffitto...).</div>';
+
     html += '<div style="margin-top:12px;padding:12px;background:var(--card);border-radius:8px;font-size:12px;color:var(--t2);line-height:1.5;">La forma e gli angoli restano quelli del laser. La misura col metro corregge la <b>lunghezza</b> di questa parete. Lo scostamento ti dice quanto il laser si discostava.</div>';
     // Nascondi/mostra la parete (per la chiusura virtuale di un rilievo aperto)
     var nascosta = window._latiNascosti && window._latiNascosti[d.indice];
@@ -2731,10 +2757,7 @@ function openDetail(zone) {
     html += '</div>';
   }
   document.getElementById('detail-content').innerHTML = html;
-  document.getElementById('detail').classList.add('open');
-  document.getElementById('detail').style.opacity = '1';
-  document.getElementById('detail').style.pointerEvents = 'all';
-  document.getElementById('detail-sheet').style.transform = 'translateY(0)';
+  _mostraPopup(px, py);
   // Inizializza il canvas ruotabile se c'e' uno schema (elementi, non angoli)
   if (window._schemaData) {
     setTimeout(initSchemaCanvas, 120);
@@ -2910,10 +2933,38 @@ function detCard(label, val, col) {
 function detailOut(e) {
   if (e.target.id === 'detail') closeDetail();
 }
+function detailClose() { closeDetail(); }
 function closeDetail() {
-  document.getElementById('detail').style.opacity = '0';
-  document.getElementById('detail').style.pointerEvents = 'none';
-  document.getElementById('detail-sheet').style.transform = 'translateY(100%)';
+  var ov = document.getElementById('detail'), sh = document.getElementById('detail-sheet');
+  ov.style.opacity = '0';
+  ov.style.pointerEvents = 'none';
+  sh.style.transform = 'scale(0.92)';
+  sh.style.opacity = '0';
+}
+// Mostra il pop-up ancorato vicino al punto (px,py schermo), dentro i bordi.
+function _mostraPopup(px, py) {
+  var ov = document.getElementById('detail'), sh = document.getElementById('detail-sheet');
+  ov.style.opacity = '1';
+  ov.style.pointerEvents = 'all';
+  sh.style.transform = 'scale(1)';
+  sh.style.opacity = '1';
+  requestAnimationFrame(function(){
+    var w = sh.offsetWidth || 300, h = sh.offsetHeight || 300;
+    var m = 12, vw = window.innerWidth, vh = window.innerHeight;
+    if (px == null || py == null) {
+      sh.style.left = Math.round((vw-w)/2)+'px';
+      sh.style.top  = Math.round((vh-h)/2)+'px';
+      return;
+    }
+    var left = px + 16;
+    if (left + w + m > vw) left = px - w - 16;
+    if (left < m) left = m;
+    var top = py - h/2;
+    if (top + h + m > vh) top = vh - h - m;
+    if (top < m) top = m;
+    sh.style.left = Math.round(left)+'px';
+    sh.style.top  = Math.round(top)+'px';
+  });
 }
 
 
@@ -2947,8 +2998,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1515 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1515');
+  console.log('%c LayoutSync v2026.10.21.1530 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1530');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
