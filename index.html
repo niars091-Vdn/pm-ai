@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1230</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1240</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1230</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1240</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -533,6 +533,7 @@ window._misureMetro = window._misureMetro || {};
 window._latiNascosti = window._latiNascosti || {};
 var _3W=3.85, _3L=4.20, _3H=2.70;
 var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
+var _fov=220;  // intensita prospettiva: piu BASSO = piu accentuata (Ctrl+scroll)
 
 // ═══ NAVIGAZIONE ═══
 var SCREENS = ['sw','sd','sc','si','sp','spr','sr','s3'];
@@ -1604,7 +1605,20 @@ function init3d() {
     else { _ry+=(e.clientX-_lx3)*0.009; _rx+=(e.clientY-_ly3)*0.009; }
     _lx3=e.clientX;_ly3=e.clientY;reqDraw3d();};
   c3.onmouseup = function(){_d3=false;};
-  c3.onwheel = function(e){e.preventDefault();_zoom*=e.deltaY>0?0.85:1.18;_zoom=Math.max(0.3,Math.min(10,_zoom));reqDraw3d();};
+  c3.onwheel = function(e){
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl/Cmd + scroll: regola l'intensità della PROSPETTIVA
+      if (_proj !== 'prosp') { _proj='prosp'; var pb=document.getElementById('projBtn'); if(pb){pb.textContent='Prosp.';pb.classList.remove('on');} }
+      _fov *= (e.deltaY>0 ? 1.12 : 0.88);   // scroll giù = fov più alto = prospettiva più piatta
+      _fov = Math.max(90, Math.min(1200, _fov));
+      toast('Prospettiva: '+(_fov<180?'forte':_fov<400?'media':'leggera'));
+      reqDraw3d();
+    } else {
+      // scroll normale: ZOOM
+      _zoom*=e.deltaY>0?0.85:1.18; _zoom=Math.max(0.3,Math.min(10,_zoom)); reqDraw3d();
+    }
+  };
   c3.addEventListener('touchstart',function(e){
     if(e.target!==c3) return;
     e.preventDefault();
@@ -2013,7 +2027,7 @@ function pr3d(x,y,z){
   if (_proj === 'asso') {
     dd = 1.0;  // assonometrica: nessuna deformazione prospettica (linee parallele restano parallele)
   } else {
-    var fov=220; dd=fov/(fov+rz2+8);  // prospettica accentuata: oggetti lontani piu piccoli
+    dd=_fov/(_fov+rz2+8);  // prospettica: _fov più basso = più accentuata
   }
   var css=window._c3css||{w:document.getElementById('c3').width,h:document.getElementById('c3').height};
   // _zoom moltiplica la scala finale -> zoom diretto ed evidente
@@ -2912,8 +2926,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1230 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1230');
+  console.log('%c LayoutSync v2026.10.21.1240 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1240');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
