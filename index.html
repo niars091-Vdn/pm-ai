@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1210</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1230</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1210</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1230</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -2013,7 +2013,7 @@ function pr3d(x,y,z){
   if (_proj === 'asso') {
     dd = 1.0;  // assonometrica: nessuna deformazione prospettica (linee parallele restano parallele)
   } else {
-    var fov=440; dd=fov/(fov+rz2+8);  // prospettica: oggetti lontani piu piccoli
+    var fov=220; dd=fov/(fov+rz2+8);  // prospettica accentuata: oggetti lontani piu piccoli
   }
   var css=window._c3css||{w:document.getElementById('c3').width,h:document.getElementById('c3').height};
   // _zoom moltiplica la scala finale -> zoom diretto ed evidente
@@ -2912,8 +2912,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1210 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1210');
+  console.log('%c LayoutSync v2026.10.21.1230 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1230');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
