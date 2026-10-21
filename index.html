@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1155</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1210</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1155</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1210</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -529,6 +529,8 @@ var _panX=0, _panY=0;   // spostamento (pan) in pixel, usato in vista pianta
 var _showQuote=true, _showAngoli=true, _showDiag=true;
 // Misure corrette col METRO (doppia misurazione): {indiceLato: metri}
 window._misureMetro = window._misureMetro || {};
+// Pareti nascoste a mano (es. la chiusura virtuale di un rilievo aperto): {indiceLato: true}
+window._latiNascosti = window._latiNascosti || {};
 var _3W=3.85, _3L=4.20, _3H=2.70;
 var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
 
@@ -1328,6 +1330,9 @@ function runProc() {
       .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .then(function(data){
         window._poligonoReale = data.poligono;
+        window._latiNascosti = {};   // nuovo file: azzera pareti nascoste
+        window._misureMetro = {};    // e correzioni metro del file precedente
+        window._apertureManuali = [];
         console.log('Poligono DXF:', data.n_lati, 'lati');
         toast('Pianta importata: ' + data.n_lati + ' lati');
         doneProc(String(data.larghezza), String(data.lunghezza), '0', '0');
@@ -1946,6 +1951,21 @@ function resetMetro(indice) {
   toast('Etichetta ripristinata al laser (reimporta per la forma originale)');
 }
 
+// Nasconde una parete dalla visualizzazione (la chiusura virtuale di un rilievo
+// aperto): non viene più disegnata né quotata. L'export la ometterà.
+function nascondiParete(indice) {
+  window._latiNascosti[indice] = true;
+  chiudiPicker();
+  draw3d();
+  toast('Parete '+(indice+1)+' nascosta');
+}
+function mostraParete(indice) {
+  delete window._latiNascosti[indice];
+  chiudiPicker();
+  draw3d();
+  toast('Parete '+(indice+1)+' ripristinata');
+}
+
 // Mostra/nascondi singoli elementi del disegno
 function toggleVista(cosa, btn) {
   if (cosa==='quote')  _showQuote  = !_showQuote;
@@ -2105,6 +2125,7 @@ function draw3d(){
     if(!inPianta) ln(a.x,H,a.z,b.x,H,b.z,col,lw);  // soffitto solo in 3D
   }
   for (var vi2=0; vi2<nLati; vi2++) {
+    if (window._latiNascosti && window._latiNascosti[vi2]) continue;  // parete nascosta a mano
     edge(vertici3d[vi2], vertici3d[(vi2+1)%nV], '#e2e8f0', 2);
   }
   if(!inPianta){
@@ -2275,6 +2296,7 @@ function draw3d(){
   if (nVp >= 3) {
     // 1) QUOTE: lunghezza di ogni parete, a metà del lato
     for (var qi=0; _showQuote && qi<nVp; qi++) {
+      if (window._latiNascosti && window._latiNascosti[qi]) continue;  // parete nascosta
       var va = vertici3d[qi];
       var vb = vertici3d[(qi+1)%nVp];
       // Salta il lato di chiusura se il poligono è aperto
@@ -2333,7 +2355,7 @@ function draw3d(){
       // Pallino angolo (pieno, colore semaforo)
       c.beginPath();c.fillStyle=col;c.arc(p[0],p[1],5,0,Math.PI*2);c.fill();
       c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;c.arc(p[0],p[1],8,0,Math.PI*2);c.stroke();
-      window._clickZones.push({sx:p[0], sy:p[1], r:32, tipo:'angolo', data:{nome:'Angolo '+(ai+1), ang:angInt.toFixed(1), scarto:scarto}});
+      window._clickZones.push({sx:p[0], sy:p[1], r:32, tipo:'angolo', data:{nome:'Angolo '+(ai+1), ang:angInt.toFixed(2), scarto:scarto}});
       // Etichetta spostata VERSO L'ESTERNO del poligono (dal centro al vertice)
       var dcx=cur.x-W/2, dcz=cur.z-L/2;
       var dcl=Math.hypot(dcx,dcz)||1;
@@ -2342,7 +2364,7 @@ function draw3d(){
       c.fillStyle='rgba(10,14,26,0.9)';
       c.font='600 10px JetBrains Mono,monospace';
       c.textAlign='center';c.textBaseline='middle';
-      var at=angInt.toFixed(0)+'°';
+      var at=angInt.toFixed(1)+'°';
       var atw=c.measureText(at).width+7;
       c.fillRect(pe[0]-atw/2,pe[1]-8,atw,16);
       c.fillStyle=col;
@@ -2645,6 +2667,13 @@ function openDetail(zone) {
     html += '<button onclick="applicaMetro('+d.indice+','+d.laser+')" style="flex:2;padding:13px;border-radius:12px;border:none;background:var(--acc);color:#04201d;font-weight:700;font-size:14px;cursor:pointer;">Applica misura</button>';
     html += '</div>';
     html += '<div style="margin-top:12px;padding:12px;background:var(--card);border-radius:8px;font-size:12px;color:var(--t2);line-height:1.5;">La forma e gli angoli restano quelli del laser. La misura col metro corregge la <b>lunghezza</b> di questa parete. Lo scostamento ti dice quanto il laser si discostava.</div>';
+    // Nascondi/mostra la parete (per la chiusura virtuale di un rilievo aperto)
+    var nascosta = window._latiNascosti && window._latiNascosti[d.indice];
+    if (nascosta) {
+      html += '<button onclick="mostraParete('+d.indice+')" style="margin-top:12px;width:100%;padding:13px;border-radius:12px;border:1px solid var(--acc);background:var(--adim);color:var(--acc);font-weight:700;font-size:14px;cursor:pointer;">👁 Mostra di nuovo questa parete</button>';
+    } else {
+      html += '<button onclick="nascondiParete('+d.indice+')" style="margin-top:12px;width:100%;padding:13px;border-radius:12px;border:1px solid #ef5d6b;background:#ef5d6b1a;color:#ef5d6b;font-weight:700;font-size:14px;cursor:pointer;">🗑 Togli questa parete (non esiste)</button>';
+    }
 
     } else if (zone.tipo === 'angolo') {
     window._schemaData = null;  // gli angoli non hanno schema ruotabile
@@ -2883,8 +2912,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1155 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1155');
+  console.log('%c LayoutSync v2026.10.21.1210 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1210');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
@@ -3218,6 +3247,7 @@ function costruisciDXF() {
 
   // ── PARETI (poligono reale) ──
   for (var i=0; i<nLati; i++){
+    if (window._latiNascosti && window._latiNascosti[i]) continue;  // parete nascosta: ometti nell'export
     var a=P[i], b=P[(i+1)%nV];
     line(a[0],a[1],b[0],b[1],'PARETI');
   }
