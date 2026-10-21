@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1240</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1515</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1240</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1515</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -533,7 +533,7 @@ window._misureMetro = window._misureMetro || {};
 window._latiNascosti = window._latiNascosti || {};
 var _3W=3.85, _3L=4.20, _3H=2.70;
 var _proj='prosp';  // 'prosp' = prospettica, 'asso' = assonometrica
-var _fov=10;  // intensita prospettiva: piu BASSO = piu accentuata (Ctrl+scroll). Scala vicina alla profondita in metri perche l'effetto si veda davvero.
+var _fov=7;  // intensita prospettiva: piu BASSO = piu accentuata (Ctrl+scroll). _fov=7 ~ +150% tra vicino e lontano. Scala in metri perche l'effetto si veda.
 
 // ═══ NAVIGAZIONE ═══
 var SCREENS = ['sw','sd','sc','si','sp','spr','sr','s3'];
@@ -2297,16 +2297,33 @@ function draw3d(){
     lbl(pw.x, pw.y, pw.z, [pw.nome, pw.v.toFixed(1)+'deg'], col, 0);
   });
 
-  // Diagonali pavimento
-  if (_showDiag) {
-    ln(0,0.02,0,W,0.02,L,'#a855f7',2,[8,4]);
-    ln(W,0.02,0,0,0.02,L,'#f97316',2,[8,4]);
-  }
-  // Righe di quota esterne (contorno del box di quotatura)
-  if (_showQuote) {
-    ln(0,0,-0.3,W,0,-0.3,'#ef4444',1.5);
-    ln(W+0.3,0,0,W+0.3,0,L,'#ef4444',1.5);
-    ln(-0.3,0,0,-0.3,H,0,'#94a3b8',1.5);
+  // Diagonali: calcolate sul PERIMETRO REALE (non sul box rettangolare).
+  // Trova le due coppie di vertici più distanti tra loro e disegna quelle
+  // diagonali — così combaciano con gli angoli veri della stanza.
+  if (_showDiag && vertici3d.length >= 4) {
+    var VD = vertici3d;
+    // coppia 1: i due vertici in assoluto più lontani
+    var i1=0, j1=1, dmax=-1;
+    for (var di=0; di<VD.length; di++) for (var dj=di+1; dj<VD.length; dj++) {
+      var dd = Math.hypot(VD[dj].x-VD[di].x, VD[dj].z-VD[di].z);
+      if (dd>dmax) { dmax=dd; i1=di; j1=dj; }
+    }
+    // coppia 2: la diagonale più lunga che NON condivide vertici con la prima
+    var i2=-1, j2=-1, dmax2=-1;
+    for (var ei=0; ei<VD.length; ei++) for (var ej=ei+1; ej<VD.length; ej++) {
+      if (ei===i1||ei===j1||ej===i1||ej===j1) continue;
+      var d2 = Math.hypot(VD[ej].x-VD[ei].x, VD[ej].z-VD[ei].z);
+      if (d2>dmax2) { dmax2=d2; i2=ei; j2=ej; }
+    }
+    ln(VD[i1].x,0.02,VD[i1].z, VD[j1].x,0.02,VD[j1].z, '#a855f7',2,[8,4]);
+    if (i2>=0) ln(VD[i2].x,0.02,VD[i2].z, VD[j2].x,0.02,VD[j2].z, '#f97316',2,[8,4]);
+    // etichetta lunghezza diagonale principale (utile per lo squadro)
+    var dm = Math.hypot(VD[j1].x-VD[i1].x, VD[j1].z-VD[i1].z);
+    var md = pr3d((VD[i1].x+VD[j1].x)/2, 0.02, (VD[i1].z+VD[j1].z)/2);
+    c.font='600 9px JetBrains Mono,monospace'; c.textAlign='center'; c.textBaseline='middle';
+    var dt = 'diag '+dm.toFixed(2)+'m'; var dtw=c.measureText(dt).width+6;
+    c.fillStyle='rgba(10,14,26,0.85)'; c.fillRect(md[0]-dtw/2, md[1]-7, dtw, 14);
+    c.fillStyle='#c79af5'; c.fillText(dt, md[0], md[1]);
   }
   // ═══ QUOTE + FUORI SQUADRO su OGNI lato/angolo del poligono reale ═══
   var nVp = vertici3d.length;
@@ -2930,8 +2947,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1240 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1240');
+  console.log('%c LayoutSync v2026.10.21.1515 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1515');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
