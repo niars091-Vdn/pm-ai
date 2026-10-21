@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1145</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1155</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1145</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1155</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -2292,7 +2292,7 @@ function draw3d(){
       // Etichette più piccole per i lati corti (nicchia), normali per le pareti
       var fs = Lm < 0.6 ? 9 : 10;
       // Testo: se corretto mostra la misura METRO (verde-oro), altrimenti il laser (teal)
-      var txt = corretto ? metro.toFixed(2)+'m' : Lm.toFixed(2)+'m';
+      var txt = corretto ? metro.toFixed(3)+'m' : Lm.toFixed(3)+'m';
       c.font='600 '+fs+'px JetBrains Mono,monospace';
       c.textAlign='center'; c.textBaseline='middle';
       var tw = c.measureText(txt).width+7;
@@ -2623,7 +2623,7 @@ function openDetail(zone) {
     } else if (zone.tipo === 'lato') {
     window._schemaData = null;
     var d = zone.data;
-    var laserCm = (d.laser*100).toFixed(0);
+    var laserCm = (d.laser*100).toFixed(1);
     var metroVal = d.metro !== null ? (d.metro*100).toFixed(0) : '';
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
     html += '<div style="width:40px;height:40px;border-radius:10px;background:#5fe3d833;border:1px solid #5fe3d8;display:flex;align-items:center;justify-content:center;font-size:20px;">📏</div>';
@@ -2883,8 +2883,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1145 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1145');
+  console.log('%c LayoutSync v2026.10.21.1155 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.21.1155');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
