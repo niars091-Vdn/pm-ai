@@ -242,7 +242,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
   </div>
   <div class="sp-logo">Layout<em>Sync</em></div>
   <div class="sp-sub">PM AI · Rilievo tecnico</div>
-  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.21.1545</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--acc);margin-top:4px;">v2026.10.22.1200</div>
   <div class="sp-ring"></div>
 </div>
 
@@ -255,7 +255,7 @@ body{font-family:var(--sans);color:var(--txt);display:flex;flex-direction:column
     <div class="tl-name">Layout<em>Sync</em></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.21.1545</span>
+    <span id="ver-badge" style="font-family:var(--mono);font-size:9px;color:var(--t3);padding:3px 7px;background:var(--surface-2);border-radius:6px;border:1px solid var(--brd);">v2026.10.22.1200</span>
     <div class="srv" onclick="openCfg()">
       <div class="dot off" id="sdot"></div>
       <span id="stxt">server</span>
@@ -2967,21 +2967,35 @@ function _mostraPopup(px, py) {
 
 
 // ═══ SERVER ═══
+// Normalizza l'URL del server: forza HTTPS (i telefoni bloccano HTTP dalla PWA
+// sicura - "mixed content"), toglie spazi e slash finale.
+function _normalizzaURL(u) {
+  if (!u) return '';
+  u = u.trim();
+  u = u.replace(/^http:\/\//i, 'https://');   // http -> https
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;  // manca schema -> aggiungi https
+  u = u.replace(/\/+$/, '');                  // togli slash finali
+  return u;
+}
 function checkServer() {
   var dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
+  // ripulisci sempre l'URL (anche se arriva da un localStorage vecchio)
+  var pulito = _normalizzaURL(SERVER);
+  if (pulito !== SERVER) { SERVER = pulito; try{localStorage.setItem('ls_srv',SERVER);}catch(e){} }
   if (!SERVER) { dot.className='dot off'; txt.textContent='non conf.'; return; }
   txt.textContent='verifico...';
-  fetch(SERVER+'/status',{signal:AbortSignal.timeout(60000)}).then(function(r){
+  fetch(SERVER+'/status',{signal:AbortSignal.timeout(60000),cache:'no-store'}).then(function(r){
     if(r.ok){dot.className='dot on';txt.textContent='online';}else throw new Error();
   }).catch(function(){dot.className='dot off';txt.textContent='offline';});
 }
 function openCfg(){document.getElementById('cfg').classList.add('open');}
 function cfgOut(e){if(e.target.id==='cfg')document.getElementById('cfg').classList.remove('open');}
 function saveCfg(){
-  SERVER=document.getElementById('cfgurl').value.trim();
+  SERVER=_normalizzaURL(document.getElementById('cfgurl').value);
   localStorage.setItem('ls_srv',SERVER);
+  document.getElementById('cfgurl').value = SERVER;  // mostra l'URL corretto
   document.getElementById('cfg').classList.remove('open');
-  checkServer(); toast('✓ Server aggiornato');
+  checkServer(); toast('✓ Server: '+SERVER);
 }
 
 // ═══ TOAST ═══
@@ -2996,8 +3010,8 @@ function toast(msg){
 function avviaApp(){
   if(window._appAvviata) return;
   window._appAvviata = true;
-  console.log('%c LayoutSync v2026.10.21.1545 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
-  console.log('Build caricata correttamente:', 'v2026.10.21.1545');
+  console.log('%c LayoutSync v2026.10.22.1200 ', 'background:#5fe3d8;color:#0a1320;font-weight:bold;padding:4px 8px;border-radius:4px;');
+  console.log('Build caricata correttamente:', 'v2026.10.22.1200');
   try { document.getElementById('cfgurl').value=SERVER; } catch(e){}
   try { checkServer(); setInterval(checkServer,20000); } catch(e){}
   setTimeout(function(){
